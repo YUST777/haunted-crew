@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"id": "hauntedcrew",
+	"version": "${version}",
+	"name": "Haunted Crew",
+	"description": "Watch your Kiro agents work as ghosts in a haunted office.",
+	"authors": ["Haunted Crew team"],
+	"license": "MIT",
+	"icon": "assets/hauntedcrew/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.hauntedcrew.HauntedCrew"],
+		"client": ["dev.hauntedcrew.client.HauntedCrewClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
