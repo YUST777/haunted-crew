@@ -1,0 +1,39 @@
+{
+  "name": "haunted-crew",
+  "version": "0.1.0",
+  "description": "Watch and command your Kiro agents as ghosts in Minecraft. Starts the bridge, installs Kiro hooks, pairs Minecraft.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "haunted-crew": "bin/haunted-crew.mjs",
+    "haunted-crew-bridge": "bin/bridge.mjs",
+    "haunted-crew-send": "bin/send-event.mjs",
+    "haunted-crew-install-hooks": "bin/install-hooks.mjs",
+    "haunted-crew-minecraft": "bin/install-minecraft.mjs"
+  },
+  "scripts": {
+    "start": "node bin/haunted-crew.mjs",
+    "test": "node --test test/*.test.mjs",
+    "demo": "node bin/haunted-crew.mjs --demo",
+    "prepack": "node -e \"const fs=require('fs'),p=require('path');const d='../mod/build/libs';const j=fs.readdirSync(d).find(f=>/^hauntedcrew-.*\\\\.jar$/.test(f)&&!f.includes('sources'));fs.mkdirSync('minecraft',{recursive:true});fs.copyFileSync(p.join(d,j),p.join('minecraft',j))\""
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.43.1",
+    "ws": "^8.18.0"
+  },
+  "files": [
+    "bin",
+    "src",
+    "minecraft",
+    "README.md"
+  ],
+  "keywords": [
+    "kiro",
+    "minecraft",
+    "ai-agents",
+    "kiroween"
+  ]
+}

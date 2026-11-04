@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haunted Crew Workflows</title>
+<link rel="stylesheet" href="/workflows/drawflow.min.css">
+<style>
+  :root {
+    --bg: #0e0a16; --panel: #161022; --panel2: #1d1530; --line: #2e2444; --text: #ece8f4; --dim: #9a90b4; --faint: #6b6385;
+    --accent: #8b5cf6; --accent-hi: #a078ff; --pumpkin: #ff9a3c; --ok: #4ade80; --warn: #ffc94d; --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-hi); }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input, select, textarea { background: #0f0b19; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; width: 100%; }
+  textarea { resize: vertical; min-height: 90px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; }
+  label { display: block; color: var(--dim); font-size: 12px; margin: 10px 0 4px; }
+  h3 { font-size: 11px; letter-spacing: .12em; color: var(--faint); margin: 18px 0 8px; font-weight: 700; }
+  .app { display: grid; grid-template-rows: 54px 1fr; grid-template-columns: 240px 1fr 320px; height: 100%; }
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header .logo { color: var(--pumpkin); font-weight: 800; white-space: nowrap; }
+  header .logo span { color: var(--dim); font-weight: 500; }
+  header select { width: 220px; }
+  header input#wfName { width: 220px; }
+  header .grow { flex: 1; }
+  #status { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  aside { background: var(--panel); padding: 4px 14px 14px; overflow-y: auto; }
+  aside.left { border-right: 1px solid var(--line); }
+  aside.right { border-left: 1px solid var(--line); }
+  .pal { display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin-bottom: 6px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; user-select: none; }
+  .pal:hover { border-color: var(--accent); }
+  .pal small { color: var(--faint); margin-left: auto; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .tpl { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
+  .tpl:hover { border-color: var(--pumpkin); }
+  .tpl b { display: block; font-size: 13px; }
+  .tpl span { color: var(--dim); font-size: 12px; }
+  #canvas { position: relative; background: radial-gradient(circle at 1px 1px, #2a2140 1px, transparent 0) 0 0 / 22px 22px, var(--bg); }
+  #drawflow { position: absolute; inset: 0; }
+  .empty-hint { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); pointer-events: none; text-align: center; }
+  /* Drawflow node look */
+  .drawflow .drawflow-node { background: var(--panel2); border: 2px solid var(--line); border-radius: 12px; color: var(--text); width: 190px; padding: 0; box-shadow: 0 6px 18px #0008; }
+  .drawflow .drawflow-node.selected { border-color: var(--accent-hi); background: #241a3a; }
+  .drawflow .drawflow-node .input, .drawflow .drawflow-node .output { background: var(--panel); border: 2px solid var(--accent); width: 16px; height: 16px; }
+  .drawflow .drawflow-node .output:hover, .drawflow .drawflow-node .input:hover { background: var(--accent); }
+  .drawflow .connection .main-path { stroke: var(--accent); stroke-width: 3px; }
+  .drawflow .connection .main-path:hover, .drawflow .connection .main-path.selected { stroke: var(--pumpkin); }
+  .drawflow-delete { background: var(--bad); border: none; color: #fff; }
+  .node { padding: 10px 12px; }
+  .node .top { display: flex; align-items: center; gap: 7px; font-weight: 700; }
+  .node .sub { color: var(--dim); font-size: 12px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .node .state { font-size: 11px; margin-top: 6px; color: var(--faint); }
+  .drawflow-node.st-running { border-color: var(--pumpkin) !important; box-shadow: 0 0 0 3px #ff9a3c33, 0 6px 18px #0008; }
+  .drawflow-node.st-running .state { color: var(--pumpkin); }
+  .drawflow-node.st-done { border-color: var(--ok) !important; }
+  .drawflow-node.st-done .state { color: var(--ok); }
+  .drawflow-node.st-failed { border-color: var(--bad) !important; }
+  .drawflow-node.st-failed .state { color: var(--bad); }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .muted { color: var(--faint); font-size: 12px; }
+  .step { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; background: var(--panel2); }
+  .step .h { display: flex; justify-content: space-between; font-weight: 600; font-size: 13px; }
+  .step pre { white-space: pre-wrap; font-size: 12px; color: var(--dim); margin: 6px 0 0; max-height: 160px; overflow: auto; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: #2a2140; color: var(--dim); }
+  .badge.running { background: #3a2a12; color: var(--pumpkin); } .badge.done { background: #12321f; color: var(--ok); } .badge.failed, .badge.stopped { background: #3a1219; color: var(--bad); }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px; width: min(560px, 92vw); padding: 18px 20px; }
+  dialog::backdrop { background: #000a; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; border-radius: 0; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  @media (max-width: 900px) { .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; } aside { max-height: 40vh; } header { flex-wrap: wrap; padding: 8px; height: auto; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">👻 Haunted Crew <span>· Workflows</span></div>
+    <select id="wfPick" title="Saved workflows"></select>
+    <input id="wfName" placeholder="Workflow name" maxlength="60">
+    <button id="btnNew">New</button>
+    <button id="btnSave">Save</button>
+    <button id="btnDelete" class="danger">Delete</button>
+    <div class="grow"></div>
+    <span id="status">connecting…</span>
+    <button id="btnRun" class="primary">▶ Run</button>
+  </header>
+
+  <aside class="left">
+    <h3>ADD A BOX</h3>
+    <div class="pal" data-add="start"><span class="dot" style="background:var(--ok)"></span>Start (the task)</div>
+    <div class="pal" data-add="agent" data-job="Planner"><span class="dot" style="background:#a6c8ff"></span>Planner</div>
+    <div class="pal" data-add="agent" data-job="Coder"><span class="dot" style="background:#7dd3fc"></span>Coder</div>
+    <div class="pal" data-add="agent" data-job="Tester"><span class="dot" style="background:#86efac"></span>Tester</div>
+    <div class="pal" data-add="agent" data-job="Reviewer"><span class="dot" style="background:#f0abfc"></span>Reviewer</div>
+    <div class="pal" data-add="agent" data-job="Docs"><span class="dot" style="background:#fde68a"></span>Docs</div>
+    <div class="pal" data-add="agent" data-job="Researcher"><span class="dot" style="background:#fdba74"></span>Researcher</div>
+    <div class="pal" data-add="end"><span class="dot" style="background:var(--bad)"></span>End (results)</div>
+    <h3>MY AGENTS <button id="btnNewAgent" style="float:right;padding:1px 8px;font-size:12px">+ New</button></h3>
+    <div id="myAgents"></div>
+    <h3>TEMPLATES</h3>
+    <div id="templates"></div>
+  </aside>
+
+  <main id="canvas">
+    <div id="drawflow"></div>
+    <div class="empty-hint" id="emptyHint">Pick a template on the left, or add boxes and drag arrows between them.<br>Each agent box becomes a ghost in the Haunted Office.</div>
+  </main>
+
+  <aside class="right">
+    <div id="inspector"></div>
+    <h3>RUNS</h3>
+    <div id="runs"><p class="muted">No runs yet. Press ▶ Run.</p></div>
+  </aside>
+</div>
+
+<dialog id="agentDlg">
+  <form method="dialog" id="agentForm">
+    <h2 style="margin:0 0 4px;font-size:18px">Custom agent</h2>
+    <p class="muted" style="margin:0">A reusable box: its instructions are given to the ghost before every task.</p>
+    <div class="row">
+      <div><label>Name</label><input name="name" maxlength="40" required placeholder="Security Checker"></div>
+      <div><label>Job (hat in the game)</label><select name="job"></select></div>
+    </div>
+    <label>Model</label><select name="model"></select>
+    <label>Instructions</label>
+    <div class="seg"><button type="button" data-src="prompt" class="on">Plain prompt</button><button type="button" data-src="skill">SKILL.md</button></div>
+    <p class="muted" id="srcHint" style="margin:6px 0">Write what this agent should do and how.</p>
+    <textarea name="instructions" rows="10" placeholder="You check code for security problems: injection, secrets in code, unsafe input…"></textarea>
+    <div class="row" style="margin-top:6px;align-items:center"><input type="file" id="skillFile" accept=".md,text/markdown,text/plain" style="flex:2"><span class="muted">or load a .md file</span></div>
+    <label>Description (optional)</label><input name="description" maxlength="200">
+    <div class="row" style="margin-top:16px">
+      <button type="button" id="agentDelete" class="danger">Delete</button>
+      <button value="cancel" formnovalidate>Cancel</button>
+      <button id="agentSave" class="primary" value="save">Save agent</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/workflows/drawflow.min.js"></script>
+<script>
+// Workflow editor. The token lives in the URL fragment (never sent to servers by the browser).
+// All user text is inserted with textContent / escaped, never as raw HTML.
+const token = new URLSearchParams(location.hash.slice(1)).get('token');
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const JOBS = ['Planner', 'Coder', 'Tester', 'Reviewer', 'Docs', 'Researcher'];
+const JOB_COLOR = { Planner: '#a6c8ff', Coder: '#7dd3fc', Tester: '#86efac', Reviewer: '#f0abfc', Docs: '#fde68a', Researcher: '#fdba74' };
+let MODELS = [['', 'Default (crew model)'], ['claude-haiku-5.5', 'Haiku 5.5 · fast · 0.06x'], ['qwen3-coder-next', 'Qwen3 Coder · 0.05x'], ['claude-sonnet-5.5', 'Sonnet 5.5 · 1.3x'], ['claude-opus-5.5', 'Opus 5.5 · 2x'], ['auto', 'Auto · 1x']];
+let state = { workflows: [], agents: [], templates: [], runs: [], canEdit: false };
+let current = null; // { id, name, description }
+let selected = null; // drawflow node id
+let activeRun = null;
+let dirty = false;
+
+async function api(path, method = 'GET', body) {
+  const res = await fetch(path, { method, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+const status = (t, color) => { $('#status').textContent = t; $('#status').style.color = color || ''; };
+
+// ---------------------------------------------------------------- canvas
+const editor = new Drawflow($('#drawflow'));
+editor.reroute = true;
+editor.start();
+
+function nodeHtml(type, data) {
+  if (type === 'start') return `<div class="node"><div class="top"><span class="dot" style="background:var(--ok)"></span>Start</div><div class="sub">${esc(data.task || 'the task')}</div><div class="state"></div></div>`;
+  if (type === 'end') return `<div class="node"><div class="top"><span class="dot" style="background:var(--bad)"></span>End</div><div class="sub">collects the results</div><div class="state"></div></div>`;
+  const custom = state.agents.find((a) => a.id === data.agentId);
+  const sub = [custom ? `★ ${custom.name}` : data.job, data.model || custom?.model].filter(Boolean).join(' · ');
+  return `<div class="node"><div class="top"><span class="dot" style="background:${JOB_COLOR[data.job] || '#7dd3fc'}"></span>👻 ${esc(data.name)}</div><div class="sub">${esc(sub)}</div><div class="state"></div></div>`;
+}
+
+function addBox(type, data, x, y) {
+  const ins = type === 'start' ? 0 : 1, outs = type === 'end' ? 0 : 1;
+  const id = editor.addNode(type, ins, outs, x, y, type, data, nodeHtml(type, data));
+  $('#emptyHint').style.display = 'none';
+  dirty = true;
+  return id;
+}
+
+function refreshNode(id) {
+  const n = editor.getNodeFromId(id);
+  const el = document.querySelector(`#node-${id} .drawflow_content_node`);
+  if (n && el) el.innerHTML = nodeHtml(n.name, n.data);
+}
+
+function nextPos() {
+  const nodes = Object.values(editor.export().drawflow.Home.data);
+  const maxX = nodes.reduce((m, n) => Math.max(m, n.pos_x), -200);
+  return [maxX + 240, 160];
+}
+
+document.querySelectorAll('.pal').forEach((el) => el.addEventListener('click', () => {
+  const type = el.dataset.add;
+  const [x, y] = nextPos();
+  const data = type === 'agent' ? { name: el.dataset.job, job: el.dataset.job, model: '', agentId: '', instructions: '' } : type === 'start' ? { task: '' } : {};
+  const id = addBox(type, data, x, y);
+  fit(toModel().nodes);
+  select(id);
+}));
+
+editor.on('nodeSelected', (id) => select(id));
+editor.on('nodeUnselected', () => select(null));
+editor.on('nodeRemoved', () => { dirty = true; select(null); });
+editor.on('connectionCreated', () => { dirty = true; });
+editor.on('connectionRemoved', () => { dirty = true; });
+editor.on('nodeMoved', () => { dirty = true; });
+
+/** Our saved shape <-> Drawflow's. */
+function toModel() {
+  const data = editor.export().drawflow.Home.data;
+  const nodes = [], edges = [];
+  for (const n of Object.values(data)) {
+    nodes.push({ id: `n${n.id}`, type: n.name, x: n.pos_x, y: n.pos_y, data: n.data });
+    for (const out of Object.values(n.outputs || {})) for (const c of out.connections) edges.push({ from: `n${n.id}`, to: `n${c.node}` });
+  }
+  return { id: current?.id, name: $('#wfName').value.trim() || 'Untitled workflow', description: current?.description || '', nodes, edges };
+}
+
+function load(wf, asCopy) {
+  editor.clear();
+  const map = {};
+  for (const n of wf.nodes) map[n.id] = addBox(n.type, { ...n.data }, n.x, n.y);
+  for (const e of wf.edges) if (map[e.from] && map[e.to]) editor.addConnection(map[e.from], map[e.to], 'output_1', 'input_1');
+  current = asCopy ? { id: undefined, name: wf.name, description: wf.description } : { id: wf.id, name: wf.name, description: wf.description };
+  $('#wfName').value = wf.name;
+  $('#emptyHint').style.display = wf.nodes.length ? 'none' : '';
+  dirty = false; // a fresh template is not unsaved work yet; Run saves it first
+  activeRun = null;
+  fit(wf.nodes);
+  select(null);
+  renderPick();
+  paintRun();
+}
+
+/** Zoom out so the whole workflow fits the canvas. */
+function fit(nodes) {
+  const w = $('#canvas').clientWidth, h = $('#canvas').clientHeight;
+  const maxX = Math.max(0, ...nodes.map((n) => n.x)) + 260, maxY = Math.max(0, ...nodes.map((n) => n.y)) + 140;
+  const z = Math.max(0.4, Math.min(1, (w - 30) / maxX, (h - 30) / maxY));
+  editor.zoom = editor.zoom_last_value = z;
+  // Drawflow scales around the canvas centre: shift so the graph starts at the top-left corner.
+  const pw = editor.precanvas.clientWidth, ph = editor.precanvas.clientHeight;
+  editor.canvas_x = -(pw * (1 - z)) / 2 + 15;
+  editor.canvas_y = -(ph * (1 - z)) / 2 + 15;
+  editor.precanvas.style.transform = `translate(${editor.canvas_x}px, ${editor.canvas_y}px) scale(${z})`;
+}
+
+// ---------------------------------------------------------------- inspector
+function field(label, el) {
+  const wrap = document.createElement('div');
+  const l = document.createElement('label');
+  l.textContent = label;
+  wrap.append(l, el);
+  return wrap;
+}
+function selectEl(options, value) {
+  const s = document.createElement('select');
+  for (const [v, t] of options) { const o = document.createElement('option'); o.value = v; o.textContent = t; s.append(o); }
+  s.value = value ?? '';
+  return s;
+}
+
+function select(id) {
+  selected = id;
+  const box = $('#inspector');
+  box.replaceChildren();
+  const h = document.createElement('h3');
+  if (!id) {
+    h.textContent = 'WORKFLOW';
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = 'Click a box to edit it. Drag from a box’s right dot to another box’s left dot to pass work along. Boxes with all inputs ready run at the same time.';
+    const task = document.createElement('textarea');
+    task.placeholder = 'Task for this run (or set it in the Start box)';
+    task.id = 'runTask';
+    task.rows = 4;
+    box.append(h, p, field('Task for the next run', task));
+    return;
+  }
+  const n = editor.getNodeFromId(id);
+  const set = (patch) => { editor.updateNodeDataFromId(id, { ...editor.getNodeFromId(id).data, ...patch }); refreshNode(id); dirty = true; };
+  h.textContent = n.name === 'agent' ? 'AGENT BOX' : n.name === 'start' ? 'START BOX' : 'END BOX';
+  box.append(h);
+  if (n.name === 'start') {
+    const t = document.createElement('textarea');
+    t.value = n.data.task || '';
+    t.placeholder = 'What should the crew do?';
+    t.oninput = () => set({ task: t.value });
+    box.append(field('Task', t));
+  } else if (n.name === 'agent') {
+    const name = document.createElement('input');
+    name.value = n.data.name; name.maxLength = 40;
+    name.oninput = () => set({ name: name.value.replace(/[^\w .-]/g, '') });
+    const job = selectEl(JOBS.map((j) => [j, j]), n.data.job);
+    job.onchange = () => set({ job: job.value });
+    const model = selectEl(MODELS, n.data.model);
+    model.onchange = () => set({ model: model.value });
+    const agent = selectEl([['', '— none —'], ...state.agents.map((a) => [a.id, `★ ${a.name}`])], n.data.agentId);
+    agent.onchange = () => {
+      const a = state.agents.find((x) => x.id === agent.value);
+      set(a ? { agentId: a.id, name: a.name, job: a.job, model: a.model || n.data.model } : { agentId: '' });
+      select(id);
+    };
+    const ins = document.createElement('textarea');
+    ins.value = n.data.instructions || '';
+    ins.placeholder = 'Extra instructions for this step (optional)';
+    ins.oninput = () => set({ instructions: ins.value });
+    box.append(field('Ghost name', name), field('Job', job), field('Model', model), field('Use a custom agent', agent), field('Instructions for this step', ins));
+  } else {
+    const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Collects every result that flows into it. The run’s output.';
+    box.append(p);
+  }
+  const del = document.createElement('button');
+  del.className = 'danger'; del.textContent = 'Delete box'; del.style.marginTop = '14px';
+  del.onclick = () => editor.removeNodeId(`node-${id}`);
+  box.append(del);
+}
+
+// ---------------------------------------------------------------- lists
+function renderPick() {
+  const pick = $('#wfPick');
+  pick.replaceChildren();
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = current?.id ? '— saved workflows —' : '(unsaved)';
+  pick.append(o0);
+  for (const w of state.workflows) { const o = document.createElement('option'); o.value = w.id; o.textContent = w.name; pick.append(o); }
+  pick.value = current?.id && state.workflows.some((w) => w.id === current.id) ? current.id : '';
+}
+$('#wfPick').onchange = (e) => {
+  const wf = state.workflows.find((w) => w.id === e.target.value);
+  if (wf && (!dirty || confirm('Discard unsaved changes?'))) load(wf);
+  else renderPick();
+};
+
+function renderTemplates() {
+  const box = $('#templates');
+  box.replaceChildren();
+  for (const t of state.templates) {
+    const d = document.createElement('div');
+    d.className = 'tpl';
+    const b = document.createElement('b'); b.textContent = t.name;
+    const s = document.createElement('span'); s.textContent = t.description;
+    d.append(b, s);
+    d.onclick = () => { if (!dirty || confirm('Discard unsaved changes?')) load(t, true); };
+    box.append(d);
+  }
+}
+
+function renderAgents() {
+  const box = $('#myAgents');
+  box.replaceChildren();
+  if (!state.agents.length) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Make your own agent from a prompt or a SKILL.md.'; box.append(p); }
+  for (const a of state.agents) {
+    const d = document.createElement('div');
+    d.className = 'pal';
+    const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = JOB_COLOR[a.job] || '#7dd3fc';
+    const name = document.createElement('span'); name.textContent = `★ ${a.name}`;
+    const edit = document.createElement('small'); edit.textContent = 'edit';
+    edit.onclick = (e) => { e.stopPropagation(); openAgent(a); };
+    d.append(dot, name, edit);
+    d.title = a.description || '';
+    d.onclick = () => { const [x, y] = nextPos(); const id = addBox('agent', { name: a.name, job: a.job, model: a.model, agentId: a.id, instructions: '' }, x, y); fit(toModel().nodes); select(id); };
+    box.append(d);
+  }
+}
+
+// ---------------------------------------------------------------- custom agent dialog
+let editingAgent = null, source = 'prompt';
+const form = $('#agentForm');
+form.job.replaceChildren(...JOBS.map((j) => Object.assign(document.createElement('option'), { value: j, textContent: j })));
+function fillModels() { form.model.replaceChildren(...MODELS.map(([v, t]) => Object.assign(document.createElement('option'), { value: v, textContent: t }))); }
+fillModels();
+function setSource(s) {
+  source = s;
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.src === s));
+  $('#srcHint').textContent = s === 'skill' ? 'Paste a SKILL.md (frontmatter with name / description, then the steps). Name and description fill in from it.' : 'Write what this agent should do and how.';
+}
+document.querySelectorAll('.seg button').forEach((b) => b.onclick = () => setSource(b.dataset.src));
+function openAgent(a) {
+  editingAgent = a || null;
+  form.reset();
+  form.name.value = a?.name || ''; form.job.value = a?.job || 'Coder'; form.model.value = a?.model || '';
+  form.instructions.value = a?.instructions || ''; form.description.value = a?.description || '';
+  setSource(a?.source || 'prompt');
+  $('#agentDelete').style.display = a ? '' : 'none';
+  $('#agentDlg').showModal();
+}
+$('#btnNewAgent').onclick = () => openAgent(null);
+$('#skillFile').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const text = (await f.text()).slice(0, 12000);
+  form.instructions.value = text;
+  setSource('skill');
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const get = (k) => m?.[1].match(new RegExp(`^${k}:\\s*(.*)$`, 'm'))?.[1]?.trim().replace(/^["']|["']$/g, '');
+  if (get('name') && !form.name.value) form.name.value = get('name').replace(/[^\w .-]/g, '').slice(0, 40);
+  if (get('description') && !form.description.value) form.description.value = get('description').slice(0, 200);
+};
+form.addEventListener('submit', async (e) => {
+  if (e.submitter?.value !== 'save') return;
+  e.preventDefault();
+  try {
+    await api('/api/crew-agents', 'PUT', { id: editingAgent?.id, name: form.name.value, job: form.job.value, model: form.model.value, source, instructions: form.instructions.value, description: form.description.value });
+    $('#agentDlg').close();
+    await refresh();
+    status('Agent saved', 'var(--ok)');
+  } catch (err) { alert(err.message); }
+});
+$('#agentDelete').onclick = async () => {
+  if (!editingAgent || !confirm(`Delete ${editingAgent.name}?`)) return;
+  await api(`/api/crew-agents/${encodeURIComponent(editingAgent.id)}`, 'DELETE');
+  $('#agentDlg').close();
+  await refresh();
+};
+
+// ---------------------------------------------------------------- save / run
+$('#btnNew').onclick = () => { if (!dirty || confirm('Discard unsaved changes?')) load({ name: 'New workflow', nodes: [{ id: 's', type: 'start', x: 60, y: 160, data: { task: '' } }], edges: [] }, true); };
+$('#btnSave').onclick = async () => {
+  try {
+    const wf = await api('/api/workflows', 'PUT', toModel());
+    current = { id: wf.id, name: wf.name, description: wf.description };
+    dirty = false;
+    await refresh();
+    status(`Saved “${wf.name}”`, 'var(--ok)');
+  } catch (err) { status(err.message, 'var(--bad)'); }
+};
+$('#btnDelete').onclick = async () => {
+  if (!current?.id || !confirm(`Delete workflow “${current.name}”?`)) return;
+  await api(`/api/workflows/${encodeURIComponent(current.id)}`, 'DELETE');
+  current = null;
+  await refresh();
+  $('#btnNew').onclick();
+};
+$('#btnRun').onclick = async () => {
+  try {
+    if (dirty || !current?.id) await $('#btnSave').onclick();
+    if (!current?.id) return;
+    const task = $('#runTask')?.value.trim();
+    activeRun = await api(`/api/workflows/${encodeURIComponent(current.id)}/run`, 'POST', { task });
+    status('Running… watch the ghosts in Minecraft', 'var(--pumpkin)');
+    paintRun();
+    poll();
+  } catch (err) { status(err.message, 'var(--bad)'); }
+};
+
+// ---------------------------------------------------------------- run view
+const STATE_TEXT = { waiting: 'waiting', running: 'working…', done: '✔ done', failed: '✖ failed' };
+function paintRun() {
+  const data = editor.export().drawflow.Home.data;
+  for (const n of Object.values(data)) {
+    const el = document.getElementById(`node-${n.id}`);
+    if (!el) continue;
+    const s = activeRun?.workflowId === current?.id ? activeRun?.steps?.[`n${n.id}`] : null;
+    el.classList.remove('st-running', 'st-done', 'st-failed');
+    if (s && s.status !== 'waiting') el.classList.add(`st-${s.status}`);
+    const st = el.querySelector('.state');
+    if (st) st.textContent = s ? STATE_TEXT[s.status] + (s.model ? ` · ${s.model}` : '') : '';
+  }
+  const box = $('#runs');
+  const runs = state.runs.filter((r) => !current?.id || r.workflowId === current.id);
+  if (activeRun && !runs.some((r) => r.id === activeRun.id)) runs.unshift(activeRun);
+  box.replaceChildren();
+  if (!runs.length) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'No runs yet. Press ▶ Run.'; box.append(p); return; }
+  const r = runs[0];
+  const head = document.createElement('div');
+  head.className = 'row';
+  head.style.alignItems = 'center';
+  const t = document.createElement('b'); t.textContent = r.name;
+  const b = document.createElement('span'); b.className = `badge ${r.status}`; b.textContent = r.status;
+  head.append(t, b);
+  if (r.status === 'running') {
+    const stop = document.createElement('button'); stop.textContent = 'Stop'; stop.className = 'danger';
+    stop.onclick = () => api(`/api/workflows/runs/${r.id}/stop`, 'POST', {}).then(poll);
+    head.append(stop);
+  }
+  box.append(head);
+  const wfNodes = Object.values(data).map((n) => ({ key: `n${n.id}`, n }));
+  for (const { key, n } of wfNodes) {
+    const s = r.steps?.[key];
+    if (!s || n.name === 'start') continue;
+    const d = document.createElement('div'); d.className = 'step';
+    const h = document.createElement('div'); h.className = 'h';
+    const name = document.createElement('span'); name.textContent = n.name === 'end' ? 'Result' : `👻 ${n.data.name}`;
+    const badge = document.createElement('span'); badge.className = `badge ${s.status}`;
+    const secs = s.startedAt ? Math.round(((s.endedAt || Date.now()) - s.startedAt) / 1000) + 's' : '';
+    badge.textContent = `${s.status}${secs ? ' · ' + secs : ''}`;
+    h.append(name, badge);
+    d.append(h);
+    if (s.output || s.error) { const pre = document.createElement('pre'); pre.textContent = s.error || s.output; d.append(pre); }
+    box.append(d);
+  }
+}
+
+let pollTimer = null;
+async function poll() {
+  clearTimeout(pollTimer);
+  if (!activeRun) return;
+  try {
+    activeRun = await api(`/api/workflows/runs/${activeRun.id}`);
+    const i = state.runs.findIndex((r) => r.id === activeRun.id);
+    if (i >= 0) state.runs[i] = activeRun; else state.runs.unshift(activeRun);
+    paintRun();
+    if (activeRun.status === 'running') pollTimer = setTimeout(poll, 1000);
+    else status(`Run ${activeRun.status}`, activeRun.status === 'done' ? 'var(--ok)' : 'var(--bad)');
+  } catch { pollTimer = setTimeout(poll, 2000); }
+}
+
+async function refresh() {
+  state = await api('/api/workflows');
+  renderPick(); renderTemplates(); renderAgents();
+  for (const b of ['#btnSave', '#btnDelete', '#btnRun', '#btnNewAgent']) $(b).disabled = !state.canEdit;
+  if (!activeRun && current?.id) activeRun = state.runs.find((r) => r.workflowId === current.id && r.status === 'running') || null;
+  paintRun();
+  if (activeRun?.status === 'running') poll();
+}
+
+(async () => {
+  if (!token) { status('Open this page from the launcher link (it carries your token).', 'var(--warn)'); return; }
+  try {
+    await refresh();
+    status(state.canEdit ? 'ready' : 'view only (this link has the view token)', state.canEdit ? '' : 'var(--warn)');
+    // Real model list from Kiro, when the bridge knows it.
+    const ag = await api('/agents').catch(() => null);
+    if (ag?.models?.length) { MODELS = [['', 'Default (crew model)'], ...ag.models.map((m) => [m.id, m.id])]; fillModels(); }
+    if (state.workflows[0]) load(state.workflows[0]);
+    else if (state.templates[0]) load(state.templates[0], true);
+  } catch (err) { status(err.message, 'var(--bad)'); }
+})();
+window.addEventListener('beforeunload', (e) => { if (dirty) e.preventDefault(); });
+</script>
+</body>
+</html>
