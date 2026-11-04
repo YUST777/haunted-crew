@@ -1,0 +1,12 @@
+{
+  "generator.hauntedcrew.haunted_office": "Haunted Office",
+  "entity.hauntedcrew.ghost": "Kiro Ghost",
+  "block.hauntedcrew.monitor": "Agent Monitor",
+  "key.category.hauntedcrew.main": "Haunted Crew",
+  "key.hauntedcrew.console": "Open agent console",
+  "screen.hauntedcrew.console": "Haunted Crew Console",
+  "screen.hauntedcrew.console.input": "Message",
+  "item.hauntedcrew.agent_console": "Agent Console",
+  "item.hauntedcrew.screen_remote": "Screen Remote",
+  "entity.hauntedcrew.screen": "Big Screen"
+}
