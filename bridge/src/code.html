@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haunted Crew · Live code</title>
+<style>
+  :root {
+    --bg: #16121f; --panel: #1f1a2c; --line: #2f2842; --text: #ffffff; --dim: #a79fc0;
+    --add: #155e33; --add-fg: #6ef59a; --del: #6b1d29; --del-fg: #ff8f8f; --accent: #ff9a3c;
+    --kw: #e0a8ff; --str: #d8ffa0; --num: #ffb08c; --com: #b4abcf; --fn: #9cc2ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font: 21px/1.35 "JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace; }
+  .app { display: grid; grid-template-columns: 230px 1fr; height: 100%; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); padding: 14px 0; overflow: hidden; }
+  aside h2 { font-size: 15px; letter-spacing: .12em; color: var(--dim); margin: 0 16px 10px; font-weight: 600; }
+  .ghosts .g { display: flex; align-items: center; gap: 8px; padding: 5px 16px; font-size: 17px; white-space: nowrap; overflow: hidden; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dim); }
+  .working .dot { background: var(--add-fg); box-shadow: 0 0 8px var(--add-fg); }
+  .waiting .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .g .f { color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
+  .recent { margin-top: 16px; }
+  .recent .r { padding: 6px 16px; font-size: 17px; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent .r.on { background: #1f1a2e; border-left-color: var(--accent); }
+  .recent .r small { color: var(--dim); }
+  main { display: flex; flex-direction: column; min-width: 0; }
+  .tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--line); height: 44px; }
+  .tab { padding: 0 18px; display: flex; align-items: center; gap: 8px; border-right: 1px solid var(--line);
+    background: var(--bg); border-top: 2px solid var(--accent); font-size: 19px; }
+  .head { padding: 10px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); font-size: 20px; }
+  .who { color: var(--accent); font-weight: 700; }
+  .stat .a { color: var(--add-fg); } .stat .d { color: var(--del-fg); }
+  .ago { margin-left: auto; color: var(--dim); font-size: 16px; }
+  .code { flex: 1; overflow: hidden; padding: 6px 0; }
+  .ln { display: grid; grid-template-columns: 52px 26px 1fr; white-space: pre; min-height: 28px; font-weight: 600; }
+  .ln .n { color: var(--dim); text-align: right; padding-right: 10px; user-select: none; }
+  .ln .s { color: var(--dim); text-align: center; }
+  .ln.add { background: var(--add); } .ln.add .s { color: var(--add-fg); }
+  .ln.del { background: var(--del); } .ln.del .s { color: var(--del-fg); } .ln.del .t { opacity: .8; text-decoration: line-through; text-decoration-color: #f8717166; }
+  .ln.fresh { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { filter: brightness(1.8); } to { filter: none; } }
+  .t { overflow: hidden; text-overflow: ellipsis; padding-right: 16px; }
+  .kw { color: var(--kw); } .str { color: var(--str); } .num { color: var(--num); } .com { color: var(--com); font-style: italic; } .fn { color: var(--fn); }
+  .empty { margin: auto; text-align: center; color: var(--dim); font-size: 26px; }
+  .empty b { display: block; font-size: 72px; margin-bottom: 8px; }
+  .status { position: fixed; right: 12px; bottom: 8px; font-size: 11px; color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h2>CREW</h2>
+    <div class="ghosts" id="ghosts"></div>
+    <div class="recent"><h2>RECENT EDITS</h2><div id="recent"></div></div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div class="status" id="status">connecting…</div>
+<script>
+// The view token lives in the URL fragment, which browsers never send to servers. All file text goes in via textContent.
+const token = new URLSearchParams(location.hash.slice(1)).get('token');
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const KW = new Set('const let var function return if else for while do switch case break continue new class extends import export from default async await try catch finally throw typeof instanceof in of this null undefined true false def self elif lambda pass public private protected static final void int boolean string interface type enum package fn mut pub use struct impl match'.split(' '));
+const TOKENS = /(\/\/.*|#.*|\/\*.*?\*\/|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*\b)/g;
+
+function highlight(target, text, file) {
+  const hashComments = /\.(py|sh|rb|ya?ml|toml)$/.test(file);
+  let last = 0;
+  for (const m of text.matchAll(TOKENS)) {
+    const t = m[0];
+    if (t[0] === '#' && !hashComments) continue;
+    if (m.index > last) target.append(text.slice(last, m.index));
+    let cls = null;
+    if (t.startsWith('//') || t.startsWith('/*') || t[0] === '#') cls = 'com';
+    else if (/^["'`]/.test(t)) cls = 'str';
+    else if (/^\d/.test(t)) cls = 'num';
+    else if (KW.has(t)) cls = 'kw';
+    else if (text[m.index + t.length] === '(') cls = 'fn';
+    target.append(cls ? el('span', cls, t) : t);
+    last = m.index + t.length;
+  }
+  target.append(text.slice(last));
+}
+
+function ago(ts) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`;
+}
+
+let shownId = null;
+function render({ edits, sessions }) {
+  const ghosts = $('ghosts');
+  ghosts.replaceChildren();
+  for (const s of sessions.slice(0, 8)) {
+    const g = el('div', `g ${s.permission ? 'waiting' : s.status}`);
+    g.append(el('span', 'dot'), el('span', null, s.agent || 'Ghost'), el('span', 'f', s.file ? `· ${s.file}` : `· ${s.status}`));
+    ghosts.append(g);
+  }
+  if (!sessions.length) ghosts.append(el('div', 'g', 'no ghosts yet'));
+
+  const recent = $('recent');
+  recent.replaceChildren();
+  edits.forEach((e, i) => {
+    const r = el('div', `r${i === 0 ? ' on' : ''}`);
+    r.append(`${e.file.split('/').pop()} `, el('small', null, `${e.agent} +${e.added} −${e.removed}`));
+    recent.append(r);
+  });
+
+  const main = $('main');
+  const e = edits[0];
+  if (!e) {
+    const empty = el('div', 'empty');
+    empty.append(el('b', null, '👻'), 'Waiting for a ghost to edit a file…');
+    main.replaceChildren(empty);
+    shownId = null;
+    return;
+  }
+  if (e.id === shownId && e.ts) { main.querySelector('.ago').textContent = ago(e.ts); return; }
+  const fresh = shownId !== null;
+  shownId = e.id;
+
+  const tabs = el('div', 'tabs');
+  tabs.append(el('div', 'tab', e.file.split('/').pop()));
+  const head = el('div', 'head');
+  const stat = el('span', 'stat');
+  stat.append(el('span', 'a', `+${e.added}`), ' ', el('span', 'd', `−${e.removed}`));
+  head.append(el('span', 'who', `👻 ${e.agent}`), el('span', null, 'editing'), el('b', null, e.file), stat, el('span', 'ago', ago(e.ts)));
+  const code = el('div', 'code');
+  for (const l of e.lines) {
+    const row = el('div', `ln${l.t === '+' ? ' add' : l.t === '-' ? ' del' : ''}${fresh && l.t !== ' ' ? ' fresh' : ''}`);
+    const t = el('span', 't');
+    highlight(t, l.text, e.file);
+    row.append(el('span', 'n', l.n ?? ''), el('span', 's', l.t === ' ' ? '' : l.t), t);
+    code.append(row);
+  }
+  main.replaceChildren(tabs, head, code);
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/code/state', { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status === 401 ? 'wrong token?' : `HTTP ${res.status}`);
+    render(await res.json());
+    $('status').textContent = 'live';
+  } catch (err) {
+    $('status').textContent = err.message;
+  }
+  setTimeout(poll, 1000);
+}
+if (token) poll(); else $('status').textContent = 'open this page from the game or the launcher link';
+</script>
+</body>
+</html>
