@@ -1,0 +1,556 @@
+{
+ "parent": "minecraft:block/block",
+ "ambientocclusion": false,
+ "textures": {
+  "monitor": "hauntedcrew:block/monitor",
+  "particle": "hauntedcrew:block/monitor"
+ },
+ "elements": [
+  {
+   "from": [
+    4.0,
+    0.0,
+    6.0
+   ],
+   "to": [
+    12.0,
+    1.0,
+    12.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  },
+  {
+   "from": [
+    7.0,
+    1.0,
+    9.0
+   ],
+   "to": [
+    9.0,
+    5.0,
+    11.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  },
+  {
+   "from": [
+    1.0,
+    4.0,
+    7.0
+   ],
+   "to": [
+    15.0,
+    14.0,
+    9.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      4.5,
+      0.5,
+      5.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      4.5,
+      0.5,
+      5.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      4.5,
+      0.5,
+      5.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      4.5,
+      0.5,
+      5.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      4.5,
+      0.5,
+      5.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      4.5,
+      0.5,
+      5.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  },
+  {
+   "from": [
+    2.0,
+    5.0,
+    6.8
+   ],
+   "to": [
+    14.0,
+    13.0,
+    7.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      8,
+      16,
+      16
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      6.5,
+      0.5,
+      7.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      6.5,
+      0.5,
+      7.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      6.5,
+      0.5,
+      7.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      6.5,
+      0.5,
+      7.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      6.5,
+      0.5,
+      7.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   },
+   "light_emission": 15,
+   "shade": false
+  },
+  {
+   "from": [
+    12.5,
+    4.3,
+    6.8
+   ],
+   "to": [
+    13.5,
+    4.8,
+    7.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      8.5,
+      0.5,
+      9.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      8.5,
+      0.5,
+      9.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      8.5,
+      0.5,
+      9.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      8.5,
+      0.5,
+      9.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      8.5,
+      0.5,
+      9.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      8.5,
+      0.5,
+      9.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  },
+  {
+   "from": [
+    3.0,
+    5.0,
+    9.0
+   ],
+   "to": [
+    13.0,
+    12.0,
+    10.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      0.5,
+      0.5,
+      1.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  },
+  {
+   "from": [
+    3.0,
+    0.0,
+    1.0
+   ],
+   "to": [
+    13.0,
+    0.75,
+    4.0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      2.5,
+      0.5,
+      3.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  },
+  {
+   "from": [
+    3.5,
+    0.75,
+    1.5
+   ],
+   "to": [
+    12.5,
+    1.0,
+    3.5
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      10.5,
+      0.5,
+      11.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "south": {
+     "uv": [
+      10.5,
+      0.5,
+      11.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "east": {
+     "uv": [
+      10.5,
+      0.5,
+      11.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "west": {
+     "uv": [
+      10.5,
+      0.5,
+      11.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "up": {
+     "uv": [
+      10.5,
+      0.5,
+      11.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    },
+    "down": {
+     "uv": [
+      10.5,
+      0.5,
+      11.5,
+      1.5
+     ],
+     "texture": "#monitor"
+    }
+   }
+  }
+ ]
+}

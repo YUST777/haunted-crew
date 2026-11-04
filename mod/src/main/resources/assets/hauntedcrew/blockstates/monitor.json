@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "hauntedcrew:block/monitor" },
+    "facing=east": { "model": "hauntedcrew:block/monitor", "y": 90 },
+    "facing=south": { "model": "hauntedcrew:block/monitor", "y": 180 },
+    "facing=west": { "model": "hauntedcrew:block/monitor", "y": 270 }
+  }
+}
