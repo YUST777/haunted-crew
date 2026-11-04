@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "haunted-crew",
+  "version": "0.1.0",
+  "description": "Install Haunted Crew: watch and command your Kiro agents as ghosts in a Minecraft haunted office. Sets up the mod, Fabric, the bridge and your project, step by step.",
+  "author": { "name": "Haunted Crew" },
+  "keywords": ["haunted crew", "minecraft", "ghosts", "fabric mod", "agent office", "kiroween"],
+  "license": "MIT"
+}
