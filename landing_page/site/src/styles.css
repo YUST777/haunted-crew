@@ -163,6 +163,23 @@ a {
     linear-gradient(rgba(6, 10, 16, 0.35), rgba(6, 10, 16, 0) 30%, rgba(6, 10, 16, 0) 75%, rgba(6, 10, 16, 0.35));
 }
 
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -90px;
+  z-index: 1;
+  height: 180px;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  background:
+    radial-gradient(ellipse 48% 52% at 50% 62%, rgba(44, 139, 157, 0.18), transparent 76%),
+    radial-gradient(ellipse 28% 60% at 14% 58%, rgba(111, 65, 168, 0.12), transparent 76%),
+    radial-gradient(ellipse 28% 60% at 86% 58%, rgba(46, 125, 145, 0.12), transparent 76%),
+    linear-gradient(180deg, transparent, rgba(8, 17, 26, 0.08));
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 76%, transparent);
+}
+
 .hero-vignette {
   position: absolute;
   inset: 0;
@@ -509,25 +526,6 @@ a {
   z-index: 0;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(5, 9, 17, 0.28), transparent 25%, transparent 65%, rgba(5, 9, 17, 0.3));
-}
-
-.crew-section::before {
-  content: '';
-  position: absolute;
-  top: -90px;
-  left: 0;
-  z-index: 1;
-  width: 100%;
-  height: 180px;
-  pointer-events: none;
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-  background:
-    radial-gradient(ellipse 48% 52% at 50% 62%, rgba(44, 139, 157, 0.18), transparent 76%),
-    radial-gradient(ellipse 28% 60% at 14% 58%, rgba(111, 65, 168, 0.12), transparent 76%),
-    radial-gradient(ellipse 28% 60% at 86% 58%, rgba(46, 125, 145, 0.12), transparent 76%),
-    linear-gradient(180deg, transparent, rgba(8, 17, 26, 0.08));
-  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 76%, transparent);
 }
 
 .crew-copy {
@@ -1057,12 +1055,11 @@ a {
     padding: 0;
   }
 
-  .crew-section::before {
-    top: -72px;
+  .hero::after {
+    inset: auto 0 -72px;
     height: 144px;
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
-    mask-image: linear-gradient(180deg, transparent, #000 22%, #000 76%, transparent);
   }
 
   .crew-scene {
