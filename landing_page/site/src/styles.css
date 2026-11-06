@@ -132,16 +132,17 @@ a {
 
 .hero {
   position: relative;
+  z-index: 2;
   min-height: max(100svh, 840px);
   display: grid;
   place-items: center;
-  overflow: hidden;
-  isolation: isolate;
+  overflow: visible;
 }
 
 .hero-bg {
   position: absolute;
-  inset: -2%;
+  inset: 0;
+  overflow: hidden;
   z-index: -3;
   background: url('/assets/office-bg.webp') center 40% / cover no-repeat, var(--bg);
   animation: bg-drift 24s ease-in-out infinite alternate;
@@ -166,9 +167,11 @@ a {
 .hero::after {
   content: '';
   position: absolute;
-  inset: auto 0 -90px;
+  bottom: -45px;
+  left: 0;
+  right: 0;
   z-index: 1;
-  height: 340px;
+  height: 140px;
   pointer-events: none;
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
@@ -224,7 +227,7 @@ a {
 
 .hero-content {
   position: relative;
-  z-index: auto;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -405,7 +408,7 @@ a {
 
 .copy-btn {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   margin-top: 0;
   width: 100%;
   display: flex;
@@ -452,7 +455,7 @@ a {
 
 .crew-section {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   overflow: visible;
   aspect-ratio: 3344 / 1882;
   background: #08111a;
@@ -1058,8 +1061,8 @@ a {
   }
 
   .hero::after {
-    inset: auto 0 -72px;
-    height: 260px;
+    bottom: -40px;
+    height: 100px;
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }

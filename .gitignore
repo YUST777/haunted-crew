@@ -4,6 +4,7 @@ dist/
 
 # browser-test screenshots and logs
 .playwright-cli/
+.wrangler/
 
 # upscaled source renders too big for git (57 MB, 17 MB); the site uses the converted webp files
 landing_page/untitled_Enhancor Image Upscale_*.png
