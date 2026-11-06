@@ -521,8 +521,8 @@ a {
   width: 100%;
   height: 300px;
   pointer-events: none;
-  backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
+  backdrop-filter: blur(32px);
   background:
     radial-gradient(ellipse 52% 80% at 50% 0%, rgba(44, 139, 157, 0.34), transparent 72%),
     radial-gradient(ellipse 32% 70% at 16% 10%, rgba(111, 65, 168, 0.22), transparent 76%),
@@ -613,8 +613,8 @@ a {
   width: 100%;
   height: 360px;
   pointer-events: none;
-  backdrop-filter: blur(36px);
   -webkit-backdrop-filter: blur(36px);
+  backdrop-filter: blur(36px);
   background: linear-gradient(
     180deg,
     rgba(11, 16, 22, 0),
@@ -1117,8 +1117,8 @@ a {
   .features-section::after {
     top: -150px;
     height: 300px;
-    backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
+    backdrop-filter: blur(28px);
   }
 
   .features-inner {
