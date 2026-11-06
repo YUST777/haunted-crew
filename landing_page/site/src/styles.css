@@ -433,7 +433,7 @@ a {
 
 .crew-section {
   position: relative;
-  z-index: 4;
+  z-index: 2;
   isolation: isolate;
   overflow: visible;
   aspect-ratio: 3344 / 1882;
@@ -512,25 +512,6 @@ a {
   background: linear-gradient(180deg, rgba(5, 9, 17, 0.45), transparent 25%, transparent 65%, rgba(5, 9, 17, 0.3));
 }
 
-.crew-section::before {
-  content: '';
-  position: absolute;
-  bottom: -120px;
-  left: 0;
-  z-index: 5;
-  width: 100%;
-  height: 360px;
-  pointer-events: none;
-  -webkit-backdrop-filter: blur(40px);
-  backdrop-filter: blur(40px);
-  background:
-    radial-gradient(ellipse 58% 42% at 50% 58%, rgba(44, 139, 157, 0.34), transparent 76%),
-    radial-gradient(ellipse 32% 62% at 14% 62%, rgba(111, 65, 168, 0.22), transparent 76%),
-    radial-gradient(ellipse 32% 62% at 86% 62%, rgba(46, 125, 145, 0.2), transparent 76%),
-    linear-gradient(180deg, transparent, rgba(11, 16, 22, 0.08) 46%, rgba(11, 16, 22, 0.3) 82%, #0b1016);
-  mask-image: linear-gradient(180deg, transparent, #000 10%, #000 72%, transparent);
-}
-
 .crew-copy {
   position: absolute;
   top: 5%;
@@ -581,13 +562,31 @@ a {
 .features-section {
   position: relative;
   z-index: 3;
-  isolation: isolate;
   overflow: visible;
-  padding: clamp(72px, 10vw, 144px) 24px;
+  padding: clamp(56px, 7vw, 88px) 24px clamp(72px, 10vw, 144px);
   background:
     radial-gradient(circle at 12% 40%, rgba(72, 56, 128, 0.2), transparent 34%),
     radial-gradient(circle at 88% 60%, rgba(34, 112, 117, 0.14), transparent 30%),
     #0b1016;
+}
+
+.features-section::after {
+  content: '';
+  position: absolute;
+  top: -90px;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 180px;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  background:
+    radial-gradient(ellipse 52% 42% at 50% 46%, rgba(44, 139, 157, 0.18), transparent 76%),
+    radial-gradient(ellipse 30% 55% at 14% 46%, rgba(111, 65, 168, 0.1), transparent 76%),
+    radial-gradient(ellipse 30% 55% at 86% 46%, rgba(46, 125, 145, 0.1), transparent 76%),
+    linear-gradient(180deg, transparent, rgba(11, 16, 22, 0.14) 72%, rgba(11, 16, 22, 0.42));
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 76%, transparent);
 }
 
 .features-section::before {
@@ -1089,6 +1088,13 @@ a {
 
   .features-section {
     padding: 112px 18px 72px;
+  }
+
+  .features-section::after {
+    top: -72px;
+    height: 144px;
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
   }
 
   .features-inner {
