@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.DS_Store
+
+# browser-test screenshots and logs
+.playwright-cli/
+
+# upscaled source renders too big for git (57 MB, 17 MB); the site uses the converted webp files
+landing_page/untitled_Enhancor Image Upscale_*.png
+landing_page/untitled_Magnific Skin Enhancer_*.png
+
+# Blender autosave backups and TanStack temp files
+*.blend1
+.tanstack/
+
+# browser screenshots and a stray font copy
+output/
+/site/
