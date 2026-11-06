@@ -10,14 +10,19 @@ const crew = [
 export function CrewSection() {
   return (
     <section className="crew-section" id="crew" aria-labelledby="crew-title">
-      <img
-        className="crew-scene"
-        src="/assets/crew-scene.webp"
-        alt="Six colorful ghost agents floating together in their moonlit haunted office."
-        width={3344}
-        height={1882}
-        loading="lazy"
-      />
+      <picture>
+        <source media="(max-width: 720px)" srcSet="/assets/crew-scene-1280.webp" />
+        <img
+          className="crew-scene"
+          src="/assets/crew-scene-2400.webp"
+          alt="Six colorful ghost agents floating together in their moonlit haunted office."
+          width={2400}
+          height={1350}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+        />
+      </picture>
       <div className="crew-copy">
         <p className="crew-eyebrow">Your haunted office team</p>
         <h2 className="crew-title" id="crew-title">Meet the crew</h2>
@@ -26,7 +31,7 @@ export function CrewSection() {
       <ul className="crew-roster" aria-label="The six ghost agents">
         {crew.map(({ name, image }) => (
           <li key={name}>
-            <img className="crew-ghost" src={image} alt="" />
+            <img className="crew-ghost" src={image} alt="" loading="lazy" decoding="async" />
             <span>{name}</span>
           </li>
         ))}
