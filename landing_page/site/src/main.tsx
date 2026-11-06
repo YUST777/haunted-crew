@@ -9,6 +9,13 @@ import '@fontsource/jetbrains-mono/600.css';
 import './styles.css';
 import { routeTree } from './routeTree.gen';
 
+const preventImageActions = (event: Event) => {
+  if (event.target instanceof HTMLImageElement) event.preventDefault();
+};
+
+document.addEventListener('contextmenu', preventImageActions);
+document.addEventListener('dragstart', preventImageActions);
+
 const router = createRouter({ routeTree, defaultPreload: 'intent', scrollRestoration: true });
 
 declare module '@tanstack/react-router' {
