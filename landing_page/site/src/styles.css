@@ -168,7 +168,7 @@ a {
   position: absolute;
   inset: auto 0 -90px;
   z-index: 1;
-  height: 180px;
+  height: 340px;
   pointer-events: none;
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
@@ -1059,7 +1059,7 @@ a {
 
   .hero::after {
     inset: auto 0 -72px;
-    height: 144px;
+    height: 260px;
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }
