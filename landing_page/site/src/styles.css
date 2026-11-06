@@ -428,7 +428,7 @@ a {
 
 .crew-section {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   isolation: isolate;
   overflow: visible;
   aspect-ratio: 3344 / 1882;
@@ -510,15 +510,20 @@ a {
 .crew-section::before {
   content: '';
   position: absolute;
-  top: -128px;
+  bottom: -150px;
   left: 0;
-  z-index: 1;
+  z-index: 5;
   width: 100%;
-  height: 256px;
+  height: 300px;
   pointer-events: none;
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
-  background: linear-gradient(180deg, rgba(11, 16, 22, 0), #0b1016 50%, rgba(11, 16, 22, 0));
+  background:
+    radial-gradient(ellipse 52% 80% at 50% 0%, rgba(44, 139, 157, 0.34), transparent 72%),
+    radial-gradient(ellipse 32% 70% at 16% 10%, rgba(111, 65, 168, 0.22), transparent 76%),
+    radial-gradient(ellipse 32% 70% at 84% 10%, rgba(46, 125, 145, 0.2), transparent 76%),
+    linear-gradient(180deg, rgba(8, 17, 26, 0), rgba(11, 16, 22, 0.86) 76%, #0b1016);
+  filter: blur(18px);
   mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
 }
 
@@ -571,7 +576,7 @@ a {
 
 .features-section {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   isolation: isolate;
   overflow: visible;
   padding: clamp(72px, 10vw, 144px) 24px;
@@ -1105,8 +1110,8 @@ a {
   }
 
   .features-section::after {
-    top: -112px;
-    height: 224px;
+    top: -150px;
+    height: 300px;
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
   }
