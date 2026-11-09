@@ -17,3 +17,7 @@ landing_page/untitled_Magnific Skin Enhancer_*.png
 # browser screenshots and a stray font copy
 output/
 /site/
+
+# local API keys
+.env.local
+.env*.local

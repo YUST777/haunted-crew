@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 import { tmpdir } from 'node:os';
+import { mkdtempSync } from 'node:fs';
+import { join } from 'node:path';
 import { createBridge } from '../src/server.mjs';
 
 const tokens = { ingest: 'i'.repeat(43), command: 'c'.repeat(43), view: 'v'.repeat(43) };
@@ -11,7 +13,7 @@ const fake = fileURLToPath(new URL('./fake-acp.mjs', import.meta.url));
 let bridge, base, events, stream;
 
 before(async () => {
-  bridge = createBridge({ tokens, log: quiet, agentOptions: { command: process.execPath, args: [fake], cwd: tmpdir() } });
+  bridge = createBridge({ tokens, log: quiet, agentOptions: { command: process.execPath, args: [fake], cwd: mkdtempSync(join(tmpdir(), 'hc-agents-')) } });
   const { port } = await bridge.listen(0, '127.0.0.1');
   base = `http://127.0.0.1:${port}`;
   events = [];
@@ -133,4 +135,62 @@ test('rejecting is reported as rejected', async () => {
   const failed = await waitFor(() => events.find((m) => m.event.session === session && m.event.kind === 'tool_end'));
   assert.equal(failed.event.ok, false);
   assert.equal(failed.event.tool, 'Edit app.ts');
+});
+
+test('pause holds the queue, interrupt drops it and cancels the turn', async () => {
+  const created = await (await call('/agents', { name: 'Stopper' })).json();
+  const id = created.session;
+  assert.equal((await (await call(`/agents/${id}/pause`)).json()).paused, true);
+  assert.equal((await (await call(`/agents/${id}/prompt`, { text: 'one' })).json()).queued, 1);
+  const list = await (await call('/agents', undefined, tokens.view, 'GET')).json();
+  const me = list.agents.find((a) => a.session === id);
+  assert.equal(me.busy, false); // paused: nothing started
+  assert.equal(me.paused, true);
+  const out = await (await call(`/agents/${id}/interrupt`)).json();
+  assert.deepEqual(out, { cancelled: false, dropped: 1 });
+  assert.equal((await call('/agents/nope/interrupt')).status, 404);
+});
+
+test('routines api: webhook needs a valid signature; history search finds events', async () => {
+  const { createHmac } = await import('node:crypto');
+  const wf = await (await call('/api/workflows', { name: 'W', nodes: [{ id: 's', type: 'start', x: 0, y: 0, data: { task: 't' } }, { id: 'a', type: 'agent', x: 0, y: 0, data: { name: 'HookGhost' } }], edges: [{ from: 's', to: 'a' }] }, tokens.command, 'PUT')).json();
+  const hook = await (await call('/api/routines', { webhook: true, name: 'h', workflowId: wf.id, task: 'go' })).json();
+  assert.ok(hook.secret);
+  const body = JSON.stringify({ a: 1 });
+  const bad = await fetch(`${base}${hook.path}`, { method: 'POST', body, headers: { 'x-hub-signature-256': 'sha256=00' } });
+  assert.equal(bad.status, 401);
+  const sig = 'sha256=' + createHmac('sha256', hook.secret).update(body).digest('hex');
+  const ok = await fetch(`${base}${hook.path}`, { method: 'POST', body, headers: { 'x-hub-signature-256': sig } });
+  assert.equal(ok.status, 202);
+  const list = await (await call('/api/routines', undefined, tokens.command, 'GET')).json();
+  assert.equal(list.routines[0].secret, undefined);
+  const found = await (await call('/api/history/search?q=login+bug', undefined, tokens.view, 'GET')).json();
+  assert.ok(found.results.length > 0);
+});
+
+test('channels, skills, backup api', async () => {
+  const ch = await (await call('/api/channels', { name: 'launch', members: ['Lead', 'Dev'], lead: 'Lead' })).json();
+  const t = await (await call(`/api/channels/${ch.id}/assign`, { from: 'Lead', to: 'Dev', task: 'build', expectedResult: 'done' })).json();
+  assert.equal(t.status, 'open');
+  const bad = await call(`/api/channels/${ch.id}/assign`, { from: 'Dev', to: 'Lead', task: 'x' });
+  assert.equal(bad.status, 400);
+  assert.equal((await call('/api/skills', { name: 'Lint Helper', description: 'd', instructions: 'i' })).status, 201);
+  assert.equal((await call('/api/skills', { name: 'Lint Helper', description: 'd', instructions: 'i' })).status, 400); // already exists
+  const bundle = await (await call('/api/backup/export', undefined, tokens.command, 'GET')).json();
+  assert.ok(Object.keys(bundle.files).some((f) => f.endsWith('SKILL.md')));
+});
+
+test('model switch: only an idle ghost, only a known model', async () => {
+  const created = await (await call('/agents', { name: 'Switcher' })).json();
+  const ok = await call(`/agents/${created.session}/model`, { model: 'claude-sonnet-5.5' });
+  assert.equal(ok.status, 200);
+  assert.equal((await call(`/agents/${created.session}/model`, { model: 'bad model!' })).status, 400);
+  assert.equal((await call('/agents/nope/model', { model: 'claude-sonnet-5.5' })).status, 404);
+  const state = await (await call('/state', undefined, tokens.view, 'GET')).json();
+  assert.equal(state.sessions.find((x) => x.session === created.session).model, 'claude-sonnet-5.5');
+});
+
+test('kiro usage needs the command token', async () => {
+  assert.equal((await call('/kiro/usage', undefined, tokens.view, 'GET')).status, 403);
+  assert.equal((await call('/kiro/usage', undefined, 'x'.repeat(43), 'GET')).status, 401);
 });

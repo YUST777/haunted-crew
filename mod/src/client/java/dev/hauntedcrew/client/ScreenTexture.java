@@ -2,10 +2,7 @@ package dev.hauntedcrew.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.hauntedcrew.HauntedCrew;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -29,44 +26,45 @@ final class ScreenTexture {
 		update(jpeg);
 	}
 
+	// JPEG decoding (a 2K frame takes tens of ms) runs on a worker so the render thread never stalls;
+	// only the newest frame is kept, and only the GPU upload happens on the render thread.
+	private static final java.util.concurrent.ExecutorService DECODER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "hauntedcrew-screen-decode");
+		t.setDaemon(true);
+		return t;
+	});
+	private static final java.util.concurrent.atomic.AtomicReference<byte[]> latestJpeg = new java.util.concurrent.atomic.AtomicReference<>();
+	private static final java.util.concurrent.atomic.AtomicReference<NativeImage> decoded = new java.util.concurrent.atomic.AtomicReference<>();
+
 	static void update(byte[] jpeg) {
-		// Fast path: Minecraft's native (stb) decoder; falls back to ImageIO if it refuses JPEG.
-		try {
-			NativeImage decoded = NativeImage.read(jpeg);
-			if (texture == null || decoded.getWidth() != width || decoded.getHeight() != height) {
-				if (texture != null) texture.close();
-				width = decoded.getWidth();
-				height = decoded.getHeight();
-				texture = new DynamicTexture(() -> "hauntedcrew screen", decoded);
-				Minecraft.getInstance().getTextureManager().register(ID, texture);
-			} else {
-				texture.getPixels().copyFrom(decoded);
-				decoded.close();
+		latestJpeg.set(jpeg);
+		DECODER.execute(() -> {
+			byte[] bytes = latestJpeg.getAndSet(null);
+			if (bytes == null) return; // a newer frame already took this one's place
+			NativeImage img;
+			try {
+				img = NativeImage.read(bytes);
+			} catch (IOException | RuntimeException e) {
+				return;
 			}
-			texture.upload();
-			return;
-		} catch (IOException | RuntimeException e) {
-			// not decodable natively; use ImageIO below
-		}
-		BufferedImage img;
-		try {
-			img = ImageIO.read(new ByteArrayInputStream(jpeg));
-		} catch (IOException e) {
-			return;
-		}
+			NativeImage stale = decoded.getAndSet(img);
+			if (stale != null) stale.close();
+			Minecraft.getInstance().execute(ScreenTexture::upload);
+		});
+	}
+
+	private static void upload() {
+		NativeImage img = decoded.getAndSet(null);
 		if (img == null) return;
-		int w = img.getWidth(), h = img.getHeight();
-		if (texture == null || w != width || h != height) {
+		if (texture == null || img.getWidth() != width || img.getHeight() != height) {
 			if (texture != null) texture.close();
-			texture = new DynamicTexture(() -> "hauntedcrew screen", w, h, false);
-			width = w;
-			height = h;
+			width = img.getWidth();
+			height = img.getHeight();
+			texture = new DynamicTexture(() -> "hauntedcrew screen", img);
 			Minecraft.getInstance().getTextureManager().register(ID, texture);
-		}
-		NativeImage pixels = texture.getPixels();
-		int[] argb = img.getRGB(0, 0, w, h, null, 0, w);
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < w; x++) pixels.setPixel(x, y, 0xFF000000 | argb[y * w + x]);
+		} else {
+			texture.getPixels().copyFrom(img);
+			img.close();
 		}
 		texture.upload();
 	}

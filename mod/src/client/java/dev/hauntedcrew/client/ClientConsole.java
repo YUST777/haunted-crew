@@ -28,7 +28,7 @@ public final class ClientConsole {
 	/** Bumped on every change so the open screen can refresh its widgets. */
 	static int version;
 	// Workflow builder: the bridge's latest JSON answers (see WorkflowScreen).
-	static String workflows, workflowRun, workflowSaved, skills;
+	static String workflows, workflowRun, workflowSaved, skills, usage;
 	static int workflowVersion;
 
 	private ClientConsole() {}
@@ -88,6 +88,7 @@ public final class ClientConsole {
 				workflowVersion++;
 				return;
 			}
+			case "usage" -> usage = v.data();
 			case "notice" -> {
 				notice = v.notice();
 				noticeAt = System.currentTimeMillis();

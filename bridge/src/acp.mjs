@@ -34,6 +34,10 @@ export class AcpConnection extends EventEmitter {
     });
   }
 
+  notify(method, params) {
+    this.#write({ jsonrpc: '2.0', method, params });
+  }
+
   respond(id, result) {
     this.#write({ jsonrpc: '2.0', id, result });
   }

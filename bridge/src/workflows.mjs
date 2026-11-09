@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { AgentError } from './agents.mjs';
+import { createMailbox } from './mailbox.mjs';
+import { createMemory, extract as extractMemories } from './memory.mjs';
+import { createSharedData } from './shared-data.mjs';
+import { createRunStore } from './runstore.mjs';
 
 // Workflows: boxes and arrows drawn in the editor page (/workflows). A "start" box holds the task,
 // each "agent" box becomes a real ghost (a Kiro agent) that gets the task plus the results of the
@@ -60,7 +64,7 @@ export function cleanWorkflow(w) {
       x: Number.isFinite(n.x) ? Math.round(n.x) : 0, y: Number.isFinite(n.y) ? Math.round(n.y) : 0,
       data: n.type === 'agent'
         ? { name: ghostName(d.name), job: JOBS.has(d.job) ? d.job : 'Coder', model: MODEL_RE.test(d.model ?? '') ? d.model : '',
-          agentId: ID_RE.test(d.agentId ?? '') ? d.agentId : '', instructions: str(d.instructions, MAX_TEXT) }
+          agentId: ID_RE.test(d.agentId ?? '') ? d.agentId : '', instructions: str(d.instructions, MAX_TEXT), lead: d.lead === true }
         : n.type === 'start' ? { task: str(d.task, MAX_TEXT) } : {},
     };
   });
@@ -107,6 +111,19 @@ export const TEMPLATES = [
       box('end', 'end', 1240, 160),
     ],
     edges: chain('start', 'plan', 'code', 'test', 'review', 'end'),
+  },
+  {
+    id: 'tpl-lead', name: 'Lead delegates: lead → coder, tester, reviewer',
+    description: 'A lead splits the task, hands subtasks to its teammates at run time, reads their results, sends fixes back, and finishes when satisfied.',
+    nodes: [
+      box('start', 'start', 40, 200, { task: 'Describe the task here' }),
+      box('lead', 'agent', 280, 200, { name: 'Lead', job: 'Planner', model: '', agentId: '', lead: true, instructions: 'Break the task into subtasks. Send code to Coder, then have Tester run tests and Reviewer check the change. If either finds problems, send them back to Coder. Finish only when tests pass and the review is clean.' }),
+      agentBox('code', 560, 60, 'Coder', 'Coder', 'Implement exactly what you are assigned with the smallest change that works.'),
+      agentBox('test', 560, 200, 'Tester', 'Tester', 'Run or write tests for what you are assigned. Report pass/fail with the command output.'),
+      agentBox('review', 560, 340, 'Reviewer', 'Reviewer', 'Review what you are assigned for bugs and risks. Do not edit files.'),
+      box('end', 'end', 820, 200),
+    ],
+    edges: [...chain('start', 'lead'), { from: 'lead', to: 'code' }, { from: 'lead', to: 'test' }, { from: 'lead', to: 'review' }, ...chain('lead', 'end')],
   },
   {
     id: 'tpl-bugfix', name: 'Bug fix: investigate → fix → verify',
@@ -165,9 +182,40 @@ export const TEMPLATES = [
   },
 ];
 
+// ---------------------------------------------------------------- lead delegation
+
+const MAX_ROUNDS = 6;
+const MAX_ASSIGNS = 4;
+
+/** The last JSON object in a reply (fenced or bare) that passes `ok`, or null. */
+function lastJson(text, ok) {
+  const t = String(text ?? '');
+  const fenced = [...t.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].map((m) => m[1]);
+  const bare = t.slice(t.lastIndexOf('{'));
+  for (const c of [...fenced.reverse(), bare]) {
+    try {
+      const o = JSON.parse(c.trim());
+      if (o && typeof o === 'object' && ok(o)) return o;
+    } catch {
+      // not this candidate
+    }
+  }
+  return null;
+}
+
+export const parseLeadReply = (text) => lastJson(text, (o) => typeof o.done === 'string' || Array.isArray(o.assign));
+/** A teammate asking another teammate: {"ask":[{"to","text"}]}. */
+export const parseAsks = (text) => lastJson(text, (o) => Array.isArray(o.ask))?.ask ?? [];
+
+const MAX_ASKS = 3;
+/** A teammate using the shared database: {"data":{"op":"query"|"execute","sql":"...","params":[]}}. */
+/** A teammate calling a bridge tool: {"tool":"<name>","args":{...}}. */
+export const parseTool = (text) => lastJson(text, (o) => typeof o.tool === 'string');
+export const parseData = (text) => lastJson(text, (o) => o.data && typeof o.data === 'object')?.data ?? null;
+
 // ---------------------------------------------------------------- store + runner
 
-export function createWorkflows({ root, agents, broadcast = () => {}, log = console }) {
+export function createWorkflows({ root, agents, broadcast = () => {}, log = console, history = null }) {
   const file = root ? join(resolve(root), '.haunted-crew', 'workflows.json') : null;
   let data = { workflows: [], agents: [] };
   if (file) {
@@ -178,7 +226,20 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
       if (err.code !== 'ENOENT') log.warn?.('[workflows] cannot read', file, err.message);
     }
   }
-  const runs = []; // newest first
+  const store = createRunStore({ root: root || undefined });
+  const runs = store.load(); // newest first; runs that were live at shutdown come back as 'interrupted'
+  const mailbox = createMailbox({ root: root || undefined });
+  const memory = createMemory({ root: root || undefined });
+  const sharedData = createSharedData({ root: root || undefined });
+
+  function this_saveAgent(a) {
+    const agent = cleanAgent(a);
+    const i = data.agents.findIndex((x) => x.id === agent.id);
+    if (i >= 0) data.agents[i] = agent;
+    else data.agents.push(agent);
+    save();
+    return agent;
+  }
 
   function save() {
     if (!file) return;
@@ -188,7 +249,11 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
   }
 
   const publicRun = (r) => ({ ...r, steps: Object.fromEntries(Object.entries(r.steps).map(([k, v]) => [k, { ...v }])) });
-  const changed = (r) => broadcast({ type: 'workflow_run', run: publicRun(r) });
+  // shortcut: saves the whole run store on every step change, upgrade to a debounce if runs get big
+  const changed = (r) => {
+    try { store.save(publicRun(r)); } catch (err) { log.warn?.('[workflows] cannot save run:', err.message); }
+    broadcast({ type: 'workflow_run', run: publicRun(r) });
+  };
 
   function promptFor(wf, node, task, inputs) {
     const custom = node.data.agentId ? data.agents.find((a) => a.id === node.data.agentId) : null;
@@ -203,13 +268,157 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
     ].filter(Boolean).join('\n\n').slice(0, 16_000);
   }
 
+  /** A lead box and the agent boxes it points at: the lead hands them subtasks at run time. */
+  function teamOf(wf, lead) {
+    return wf.edges.filter((e) => e.from === lead.id).map((e) => wf.nodes.find((n) => n.id === e.to)).filter((n) => n?.type === 'agent');
+  }
+
+  async function lead(run, wf, node, task, inputs, changed, leadGhost) {
+    const team = teamOf(wf, node);
+    const ghosts = new Map([[node.id, leadGhost.session]]); // box id -> ghost session
+    const member = (name) => team.find((m) => m.data.name.toLowerCase() === String(name).trim().toLowerCase());
+    const ask = async (m, prompt) => {
+      if (m === node) return agents.run(leadGhost.session, prompt); // the lead's own step is tracked by the caller
+      const s = run.steps[m.id];
+      s.status = 'running'; s.startedAt = Date.now(); delete s.endedAt; changed(run);
+      try {
+        if (!ghosts.has(m.id)) {
+          const custom = m.data.agentId ? data.agents.find((a) => a.id === m.data.agentId) : null;
+          const g = await agents.create(m.data.name, m.data.model || custom?.model || undefined);
+          ghosts.set(m.id, g.session); s.ghost = g.session; s.model = g.model;
+        }
+        const text = await agents.run(ghosts.get(m.id), prompt);
+        Object.assign(s, { status: 'done', endedAt: Date.now(), output: text.slice(0, 4000) });
+        return text;
+      } catch (err) {
+        Object.assign(s, { status: 'failed', endedAt: Date.now(), error: String(err.message).slice(0, 200) });
+        return `(failed: ${err.message})`;
+      } finally {
+        changed(run);
+      }
+    };
+    // A teammate may message another teammate (OpenBot-style send_message). The recipient gets the
+    // message with a fixed reply format and cannot ask anyone itself (nesting lock), so chains stay short.
+    const runTool = (me, name, args, members) => {
+      try {
+        switch (name) {
+          case 'list_agents': return JSON.stringify(members.map((t) => ({ name: t.data.name, job: t.data.job })));
+          case 'forget_memory': return JSON.stringify({ ok: memory.forget(me, String(args.id)) });
+          case 'search_memories': return JSON.stringify(memory.search(me, String(args.query ?? ''), { limit: 5 }));
+          case 'list_tables': return JSON.stringify(sharedData.tables());
+          case 'delete_table': return JSON.stringify(sharedData.deleteTable(me, String(args.name)));
+          case 'history_search': return JSON.stringify(history ? history.search(String(args.query ?? ''), { limit: 5 }) : []).slice(0, 3000);
+          case 'history_read': return JSON.stringify(history?.read(String(args.id)) ?? null).slice(0, 3000);
+          case 'create_agent': return JSON.stringify(this_saveAgent({ name: args.name, job: args.job, instructions: args.instructions, source: 'prompt' }));
+          default: return `unknown tool "${name}". Tools: list_agents, forget_memory, search_memories, list_tables, delete_table, history_search, history_read, create_agent.`;
+        }
+      } catch (err) { return `error: ${err.message}`; }
+    };
+    const converse = async (m, prompt) => {
+      const me = m.data.name;
+      for (let i = 0; i < MAX_ASKS; i++) {
+        const reply = await ask(m, prompt);
+        for (const e of extractMemories(reply)) {
+          try { memory.remember(me, e.text, e.tags); } catch { /* bad memory line: ignore */ }
+        }
+        const asks = parseAsks(reply).slice(0, MAX_ASSIGNS);
+        const op = parseData(reply);
+        const tool = parseTool(reply);
+        const q = typeof agents.askUser === 'function' ? lastJson(reply, (o) => o.ask_user && typeof o.ask_user === 'object')?.ask_user : null;
+        if ((!asks.length && !op && !q && !tool) || run.status !== 'running') return reply;
+        const parts = await Promise.all(asks.map(async (a) => {
+          const to = member(a?.to);
+          if (!to || to === m) return `## ${a?.to}\nNo such teammate. Teammates: ${team.filter((t) => t !== m).map((t) => t.data.name).join(', ')}.`;
+          let sent;
+          try { sent = mailbox.send({ from: me, to: [to.data.name], text: String(a.text ?? '').slice(0, MAX_TEXT) || '(empty)' }); } catch (err) { return `## ${a.to}\nNot sent: ${err.message}`; }
+          const out = await ask(to, mailbox.wrapper(sent.deliveries[0].id) + '\nDo not ask anyone else.');
+          mailbox.markRead(sent.deliveries[0].id);
+          try { mailbox.send({ from: to.data.name, to: [me], text: out.slice(0, MAX_TEXT) || '(empty)', replyTo: sent.id, expectsReply: false }); } catch { /* reply too long or empty: still returned below */ }
+          return `## ${to.data.name} (reply to ${sent.id})\n${out}`;
+        }));
+        if (op) {
+          let res;
+          try {
+            res = op.op === 'execute' ? sharedData.execute(me, String(op.sql), op.params ?? []) : sharedData.query(me, String(op.sql), op.params ?? []);
+          } catch (err) { res = { error: err.message }; }
+          parts.push(`## shared database (${op.op === 'execute' ? 'execute' : 'query'})\n${JSON.stringify(res).slice(0, 3000)}`);
+        }
+        if (tool) parts.push(`## tool ${tool.tool}\n${runTool(me, tool.tool, tool.args ?? {}, team)}`);
+        if (q) {
+          const answer = await agents.askUser(ghosts.get(m.id), String(q.question ?? 'Question'), q.options).catch(() => null);
+          parts.push(`## the user answered\n${answer ?? '(no answer; decide yourself)'}`);
+        }
+        prompt = `Replies:\n\n${parts.join('\n\n')}\n\nContinue your assignment, then give your final result.`.slice(0, 16_000);
+      }
+      return ask(m, `${prompt}\n\nNo more messages allowed. Give your final result now.`);
+    };
+
+    const roster = team.map((m) => {
+      const c = m.data.agentId ? data.agents.find((a) => a.id === m.data.agentId) : null;
+      const what = [m.data.job, c?.description || m.data.instructions].filter(Boolean).join(': ').slice(0, 200);
+      return `- ${m.data.name} (${what})`;
+    }).join('\n');
+    const head = promptFor(wf, node, task, inputs);
+    const protocol = [
+      `You are the LEAD of a team. Your teammates:\n${roster || '(none: do the work yourself)'}`,
+      'You do not do the teammates\' jobs. Split the task, assign subtasks, read their results, then fix gaps or finish.',
+      'End EVERY reply with exactly one JSON block, and nothing after it:',
+      '```json\n{"assign":[{"to":"<teammate name>","task":"<what to do, with every detail they need>"}]}\n```',
+      `to hand out work (at most ${MAX_ASSIGNS} at once, they run in parallel), or`,
+      '```json\n{"done":"<final answer for the user>"}\n```',
+      'when the task is finished. Teammates cannot see each other; put what they need in the task.',
+    ].join('\n');
+    let prompt = `${head}\n\n${protocol}`;
+    let final = '';
+    for (let round = 1; round <= MAX_ROUNDS; round++) {
+      const reply = await ask(node, prompt);
+      const move = parseLeadReply(reply);
+      if (!move) {
+        if (round === MAX_ROUNDS) { final = reply; break; }
+        prompt = 'Your last reply had no valid JSON block. Reply again, ending with {"assign":[...]} or {"done":"..."} in a ```json block.';
+        continue;
+      }
+      if (typeof move.done === 'string') { final = move.done; break; }
+      if (run.status !== 'running') throw new Error('stopped');
+      const jobs = move.assign.slice(0, MAX_ASSIGNS);
+      const results = await Promise.all(jobs.map(async (j) => {
+        const m = member(j?.to);
+        if (!m) return `## ${j?.to}\nNo such teammate. Teammates: ${team.map((t) => t.data.name).join(', ')}.`;
+        const custom = m.data.agentId ? data.agents.find((a) => a.id === m.data.agentId) : null;
+        const ins = [custom?.instructions, m.data.instructions].filter(Boolean).join('\n\n');
+        const out = await converse(m, [
+          `You are "${m.data.name}", a teammate of the lead "${node.data.name}" in the workflow "${wf.name}".`,
+          ins && `Your instructions:\n${ins}`,
+          memory.prelude(m.data.name, String(j.task ?? '')),
+          `Overall task:\n${task || '(none)'}`,
+          `Your assignment:\n${String(j.task ?? '').slice(0, MAX_TEXT)}`,
+          'Do only this assignment. To get help from another teammate, end your reply with a ```json block {"ask":[{"to":"<teammate>","text":"<request with every detail>"}]} and wait for the answer.',
+          'If your tools include a "crew" server (send_message, query_data, remember, ask_user...), call those tools directly and ignore the JSON blocks below. Otherwise: tools (end your reply with ```json {"tool":"<name>","args":{...}}): list_agents, forget_memory {id}, search_memories {query}, list_tables, delete_table {name}, history_search {query}, history_read {id}, create_agent {name,job,instructions}. To ask the human a question, end your reply with ```json {"ask_user":{"question":"...","options":["A","B"]}} and wait. To remember something for next time, put a line `REMEMBER: [tag1,tag2] fact` in your reply. Shared database (tables you create are yours; others cannot drop them): end your reply with a ```json block {"data":{"op":"query"|"execute","sql":"...","params":[]}} and wait for the answer. Put big data in the database, not in messages. Your final result is three lines:\nStatus: done | partial | blocked\nResult: <concrete outcome>\nEvidence: <file, test, command, or none>',
+        ].filter(Boolean).join('\n\n').slice(0, 16_000));
+        return `## ${m.data.name}\n${out}`;
+      }));
+      prompt = `Results from your teammates:\n\n${results.join('\n\n')}\n\nDecide: assign more work, or finish. End with the JSON block.`.slice(0, 16_000);
+      if (round === MAX_ROUNDS) final = results.join('\n\n');
+    }
+    return final;
+  }
+
   async function execute(run, wf, task) {
     const byId = new Map(wf.nodes.map((n) => [n.id, n]));
+    // Boxes a lead points at are run by the lead, not by the arrows.
+    const managed = new Map();
+    for (const n of wf.nodes) if (n.type === 'agent' && n.data.lead) for (const m of teamOf(wf, n)) managed.set(m.id, n.id);
     const promises = new Map();
     const step = (id) => {
       if (promises.has(id)) return promises.get(id);
       const p = (async () => {
         const ups = wf.edges.filter((e) => e.to === id).map((e) => e.from);
+        if (managed.has(id)) { // finished with its lead; its steps were filled in during the lead's run
+          await step(managed.get(id));
+          const s = run.steps[id];
+          if (s.status === 'waiting') s.status = 'done';
+          return { name: byId.get(id).data.name, type: 'agent', text: '' };
+        }
         const inputs = await Promise.all(ups.map(step));
         if (run.status !== 'running') throw new Error('stopped');
         const node = byId.get(id);
@@ -226,7 +435,9 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
           s.ghost = ghost.session;
           s.model = ghost.model;
           changed(run);
-          text = await agents.run(ghost.session, promptFor(wf, node, task, inputs.filter((i) => i.type !== 'start')));
+          text = node.data.lead
+            ? await lead(run, wf, node, task, inputs.filter((i) => i.type !== 'start'), changed, ghost)
+            : await agents.run(ghost.session, promptFor(wf, node, task, inputs.filter((i) => i.type !== 'start')));
         }
         s.status = 'done';
         s.endedAt = Date.now();
@@ -278,6 +489,7 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
 
   return {
     skills,
+    stores: { mailbox, memory, sharedData },
     list: () => ({ workflows: data.workflows, agents: data.agents, templates: TEMPLATES, runs: runs.map(publicRun) }),
 
     saveWorkflow(w) {
@@ -295,14 +507,7 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
       return { ok: true };
     },
 
-    saveAgent(a) {
-      const agent = cleanAgent(a);
-      const i = data.agents.findIndex((x) => x.id === agent.id);
-      if (i >= 0) data.agents[i] = agent;
-      else data.agents.push(agent);
-      save();
-      return agent;
-    },
+    saveAgent: (a) => this_saveAgent(a),
 
     deleteAgent(id) {
       data.agents = data.agents.filter((a) => a.id !== id);

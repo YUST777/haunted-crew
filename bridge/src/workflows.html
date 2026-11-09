@@ -317,7 +317,11 @@ function select(id) {
     ins.value = n.data.instructions || '';
     ins.placeholder = 'Extra instructions for this step (optional)';
     ins.oninput = () => set({ instructions: ins.value });
-    box.append(field('Ghost name', name), field('Job', job), field('Model', model), field('Use a custom agent', agent), field('Instructions for this step', ins));
+    const lead = document.createElement('input');
+    lead.type = 'checkbox'; lead.checked = !!n.data.lead;
+    lead.onchange = () => set({ lead: lead.checked });
+    const leadRow = field('Lead: hands subtasks to the boxes it points at, at run time', lead);
+    box.append(field('Ghost name', name), leadRow, field('Job', job), field('Model', model), field('Use a custom agent', agent), field('Instructions for this step', ins));
   } else {
     const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Collects every result that flows into it. The run’s output.';
     box.append(p);

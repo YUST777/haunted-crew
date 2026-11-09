@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { AcpConnection } from './acp.mjs';
 import { clean, safePath } from './normalize.mjs';
 
@@ -43,7 +44,11 @@ const snake = (s) => String(s ?? '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLo
 export function createAgentManager({
   command, args = ['acp'], cwd, emit, log = console, permissionTimeoutMs = 10 * 60_000, initTimeoutMs = 30_000, sessionTimeoutMs = 120_000,
   processes = Number(process.env.HAUNTED_CREW_AGENT_PROCS) || 4, maxAgents = MAX_AGENTS, model = process.env.HAUNTED_CREW_MODEL || DEFAULT_MODEL,
+  // Crew tools over MCP: a function returning the bridge URL once it is listening (or null); off with HAUNTED_CREW_MCP=0.
+  mcpUrl = null,
 }) {
+  const crewMcp = fileURLToPath(new URL('../bin/crew-mcp.mjs', import.meta.url));
+  const tokens = new Map(); // tool token -> session id (set once the agent is named)
   const defaultModel = model;
   // Sessions start on the default model, so only other picks need a session/set_model round trip
   // (which queues behind any session/new in that process).
@@ -79,6 +84,7 @@ export function createAgentManager({
         for (const q of a.queue) q.done?.reject(new AgentError(502, 'kiro-cli exited'));
         clearTimeout(a.draftTimer);
         agents.delete(session);
+        for (const [t, id] of tokens) if (id === session) tokens.delete(t);
       }
       for (const [id, p] of permissions) {
         if (p.worker !== w) continue;
@@ -101,8 +107,12 @@ export function createAgentManager({
   async function newSession(w) {
     await connect(w);
     let res;
+    let mcpToken = null;
     try {
-      res = await w.conn.request('session/new', { cwd, mcpServers: [] }, sessionTimeoutMs);
+      const url = process.env.HAUNTED_CREW_MCP === '0' ? null : mcpUrl?.();
+      mcpToken = url ? randomUUID() : null;
+      const mcpServers = url ? [{ name: 'crew', command: process.execPath, args: [crewMcp], env: [{ name: 'HC_BRIDGE_URL', value: url }, { name: 'HC_TOKEN', value: mcpToken }] }] : [];
+      res = await w.conn.request('session/new', { cwd, mcpServers }, sessionTimeoutMs);
     } catch (err) {
       // Typically "authentication required" when kiro-cli is signed out.
       throw new AgentError(502, `Kiro could not start an agent: ${clean(err.message, 160)}`);
@@ -112,7 +122,7 @@ export function createAgentManager({
     if (Array.isArray(list) && !models) {
       models = list.slice(0, 40).map((m) => ({ id: clean(m.modelId, 64), name: clean(m.name, 64), description: clean(m.description, 120) })).filter((m) => m.id);
     }
-    return { session: res.sessionId, model: clean(res.models?.currentModelId, 64) ?? null, worker: w };
+    return { session: res.sessionId, model: clean(res.models?.currentModelId, 64) ?? null, worker: w, token: mcpToken };
   }
 
   // Keep one ready session per process, as long as the crew has room for it.
@@ -205,7 +215,8 @@ export function createAgentManager({
     if (optionId !== null && !p.options.some((o) => o.id === optionId)) throw new AgentError(400, 'unknown option');
     permissions.delete(requestId);
     clearTimeout(p.timer);
-    p.worker.conn?.respond(p.rpcId, optionId === null ? { outcome: { outcome: 'cancelled' } } : { outcome: { outcome: 'selected', optionId } });
+    if (p.resolve) p.resolve(optionId === null ? null : p.options.find((o) => o.id === optionId)?.name ?? null);
+    else p.worker.conn?.respond(p.rpcId, optionId === null ? { outcome: { outcome: 'cancelled' } } : { outcome: { outcome: 'selected', optionId } });
     const a = agents.get(p.session);
     if (a) a.permission = undefined;
     const chosen = p.options.find((o) => o.id === optionId);
@@ -215,7 +226,7 @@ export function createAgentManager({
 
   async function runQueue(session) {
     const a = agents.get(session);
-    if (!a || a.busy) return;
+    if (!a || a.busy || a.paused) return;
     const item = a.queue.shift();
     if (item === undefined) return;
     const { text, done } = item;
@@ -285,6 +296,7 @@ export function createAgentManager({
       agents.set(s.session, {
         name: name.trim(), model: modelId, worker: w, busy: false, queue: [], reply: '', thought: '', permission: undefined, tools: new Map(), draftTimer: null,
       });
+      if (s.token) tokens.set(s.token, s.session);
       event(s.session, 'session_start', { model: modelId });
       refill(w);
       return { session: s.session, name: name.trim(), model: modelId };
@@ -310,13 +322,69 @@ export function createAgentManager({
       });
     },
 
+    /** Stops the running turn (ACP session/cancel) and drops everything queued behind it. */
+    interrupt(session) {
+      const a = agents.get(session);
+      if (!a) throw new AgentError(404, 'no such agent');
+      const dropped = a.queue.splice(0);
+      for (const q of dropped) q.done?.reject(new AgentError(409, 'interrupted'));
+      a.paused = false;
+      if (a.busy) a.worker.conn?.notify('session/cancel', { sessionId: session });
+      return { cancelled: a.busy, dropped: dropped.length };
+    },
+
+    /** Pause lets the running turn finish but starts nothing new; resume continues the queue. */
+    setPaused(session, paused) {
+      const a = agents.get(session);
+      if (!a) throw new AgentError(404, 'no such agent');
+      a.paused = Boolean(paused);
+      if (!a.paused) runQueue(session);
+      return { paused: a.paused, queued: a.queue.length };
+    },
+
+    /** The agent asks the human a question (OpenBot ask_user): shows as a card with the options as buttons. Resolves with the chosen option's text, or null on timeout. */
+    askUser(session, question, options) {
+      const a = agents.get(session);
+      if (!a) return Promise.reject(new AgentError(404, 'no such agent'));
+      const opts = (Array.isArray(options) && options.length ? options : ['Yes', 'No']).slice(0, 4).map((o, i) => ({ id: `ans${i}`, name: clean(String(o), 40), kind: 'allow_once' }));
+      return new Promise((resolve) => {
+        const requestId = randomUUID();
+        const timer = setTimeout(() => resolvePermission(requestId, null, 'no answer'), permissionTimeoutMs);
+        timer.unref?.();
+        permissions.set(requestId, { rpcId: null, worker: a.worker, session, timer, options: opts, resolve });
+        a.permission = requestId;
+        event(session, 'permission', { request: { id: requestId, title: clean(question, 120) ?? 'Question', options: opts } });
+      });
+    },
+
+    /** Switches an idle ghost to another Kiro model (ACP session/set_model). */
+    async setModel(session, modelId) {
+      const a = agents.get(session);
+      if (!a) throw new AgentError(404, 'no such agent');
+      if (typeof modelId !== 'string' || !MODEL_RE.test(modelId)) throw new AgentError(400, 'bad model id');
+      if (models && !models.some((m) => m.id === modelId)) throw new AgentError(400, `Kiro has no model "${clean(modelId, 64)}"`);
+      if (a.busy || a.queue.length) throw new AgentError(409, 'wait until the ghost is idle');
+      await a.worker.conn.request('session/set_model', { sessionId: session, modelId }, sessionTimeoutMs)
+        .catch((err) => { throw new AgentError(502, `Kiro could not switch to ${clean(modelId, 64)}: ${clean(err.message, 120)}`); });
+      a.model = modelId;
+      event(session, 'model', { model: modelId });
+      return { model: modelId };
+    },
+
+    /** The agent that owns a crew-tools token, as { name, session }, or null. */
+    byToolToken(token) {
+      const session = tokens.get(token);
+      const a = session && agents.get(session);
+      return a ? { name: a.name, session } : null;
+    },
+
     resolvePermission(requestId, optionId) {
       resolvePermission(requestId, optionId ?? null);
       return { ok: true };
     },
 
     list() {
-      return [...agents].map(([session, a]) => ({ session, name: a.name, model: a.model, busy: a.busy, queued: a.queue.length, permission: a.permission }));
+      return [...agents].map(([session, a]) => ({ session, name: a.name, model: a.model, busy: a.busy, paused: Boolean(a.paused), queued: a.queue.length, permission: a.permission }));
     },
 
     models: () => models,

@@ -19,9 +19,9 @@ const CANDIDATES = [
 ].filter(Boolean);
 
 export const VIEWPORT = { width: 1280, height: 598 }; // the office screen is 15 x 7 blocks
-// Rendered at 2x pixel density (like a Retina screen) so text stays sharp on big windows.
-const SCALE = 2;
-const FRAME_INTERVAL_MS = 90; // at most ~11 frames a second to Minecraft
+// Rendered at 1.5x pixel density so text stays sharp on big windows.
+const SCALE = 1.5; // 1920 x 897: sharp enough on the 15-block wall, ~45% fewer pixels to encode, send and decode
+const FRAME_INTERVAL_MS = 50; // at most ~20 frames a second to Minecraft
 const CAPTURE_EVERY_MS = 100;
 
 export function findChrome() {
@@ -42,6 +42,8 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
   let lastError = null;
   let captureLoop = null;
   let poll = null;
+  let session = null;
+  let lastCast = 0;
 
   function emitFrame(frame) {
     const wait = FRAME_INTERVAL_MS - (Date.now() - lastSent);
@@ -70,19 +72,46 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
         headless: true,
         defaultViewport: { ...VIEWPORT, deviceScaleFactor: SCALE },
         userDataDir: join(homeDir(), 'browser'),
-        args: ['--no-first-run', '--no-default-browser-check', '--disable-extensions', '--mute-audio', '--disk-cache-size=52428800'],
+        args: ['--no-first-run', '--no-default-browser-check', '--disable-extensions', '--mute-audio', '--disk-cache-size=52428800',
+          '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
+          '--enable-gpu-rasterization', '--enable-zero-copy'],
       });
       browser.on('disconnected', () => {
         clearTimeout(poll);
-        browser = page = cdp = null;
+        browser = page = cdp = session = null;
       });
       page = await browser.newPage();
       cdp = true; // capture loop runs while set
+      // Fast path: Chrome pushes a JPEG only when the picture changes (no polling, no full screenshots).
+      const startCast = async () => {
+        try {
+          session ??= await page.createCDPSession();
+          session.removeAllListeners('Page.screencastFrame');
+          session.on('Page.screencastFrame', (f) => {
+            lastCast = Date.now();
+            session?.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {});
+            if (f.data !== lastData) {
+              lastData = f.data;
+              emitFrame({ data: f.data, width: VIEWPORT.width * SCALE, height: VIEWPORT.height * SCALE, url: page?.url() ?? '' });
+            }
+          });
+          await session.send('Page.startScreencast', { format: 'jpeg', quality: 70, maxWidth: VIEWPORT.width * SCALE, maxHeight: VIEWPORT.height * SCALE, everyNthFrame: 1 });
+        } catch (err) {
+          session = null; // screenshot polling below still works
+        }
+      };
+      page.on('framenavigated', (f) => { if (f === page.mainFrame()) startCast(); });
+      await startCast();
       // Full-density screenshots back to back, sending only the ones that changed. page.screenshot
       // follows the page across cross-site navigations (a raw CDP session would get detached).
       const capture = async () => {
         if (!cdp || !page) return;
         const started = Date.now();
+        // While the screencast is delivering, a slow safety screenshot once a second is enough.
+        if (session && started - lastCast < 1000 && started % 1000 > 150) {
+          poll = setTimeout(capture, 50);
+          return;
+        }
         try {
           // A screenshot taken while a navigation commits can hang forever; never let one stall the loop.
           const data = await Promise.race([
@@ -127,7 +156,10 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
     lastFrame: () => last,
     open: guard(async (url) => {
       const p = await start();
-      await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+      // Frames stream while the page loads, so don't make the player wait for slow pages: return after 1.5 s.
+      const nav = p.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+      nav.catch(() => {});
+      await Promise.race([nav, new Promise((r) => setTimeout(r, 1500))]);
       if (captureLoop) {
         const run = captureLoop;
         captureLoop = null;
@@ -175,7 +207,7 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
     async stop() {
       const b = browser;
       clearTimeout(poll);
-      browser = page = cdp = null;
+      browser = page = cdp = session = null;
       captureLoop = null;
       last = lastData = null;
       await b?.close().catch(() => {});

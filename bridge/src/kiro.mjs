@@ -73,10 +73,30 @@ export function createKiro({ command = 'kiro-cli', demo = false, log = console }
     });
   }
 
+  // Plan credits from `kiro-cli chat --no-interactive /usage` ("Credits (597.24 of 1000 covered in plan), 59.7%").
+  let usageCache = null;
+  function usage() {
+    if (demo) return Promise.resolve({ demo: true, used: 123.4, total: 1000, percent: 12.3, plan: 'DEMO', resets: null });
+    if (usageCache && Date.now() - usageCache.at < 60_000) return Promise.resolve(usageCache.value);
+    return new Promise((resolve) => {
+      execFile(command, ['chat', '--no-interactive', '/usage'], { timeout: 30_000 }, (err, stdout, stderr) => {
+        const out = stripAnsi(`${stdout}\n${stderr}`);
+        const head = out.match(/Estimated Usage\s*\|\s*resets on\s*([\d-]+)\s*\|\s*([^\n]+)/i);
+        const credits = out.match(/Credits\s*\(([\d.]+)\s*of\s*([\d.]+)[^)]*\),\s*([\d.]+)%/i);
+        const value = credits
+          ? { used: Number(credits[1]), total: Number(credits[2]), percent: Number(credits[3]), plan: head?.[2]?.trim().slice(0, 40) ?? null, resets: head?.[1] ?? null }
+          : { error: err?.code === 'ENOENT' ? 'kiro-cli is not installed' : 'could not read usage' };
+        if (credits) usageCache = { at: Date.now(), value };
+        resolve(value);
+      });
+    });
+  }
+
   const view = (s) => ({ url: s.url, code: s.code, lines: s.lines.slice(-4), done: s.done, error: s.error ?? null });
 
   return {
     status,
+    usage,
     startLogin,
     close() {
       if (login && !login.done) login.proc?.kill();

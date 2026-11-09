@@ -96,7 +96,6 @@ if (kiro.demo) console.log(`  ${c.ok('✔')} demo mode: agents are pretend, no K
 else if (kiro.installed === false) console.log(`  ${c.warn('!')} kiro-cli not found. Install it from https://kiro.dev/downloads, or run with --demo`);
 else if (!kiro.signedIn) console.log(`  ${c.warn('!')} not signed in yet. Press K in Minecraft → "Sign in to Kiro", or run: kiro-cli login`);
 else console.log(`  ${c.ok('✔')} signed in${kiro.user ? `: ${kiro.user}` : ''}`);
-if (kiro.signedIn || kiro.demo) bridge.warmUpAgents(); // spare agent sessions get ready in the background
 
 step(3, 'Bridge');
 let addr;
@@ -106,6 +105,7 @@ try {
   console.error(`  ✖ could not listen on ${host}:${port} (${err.code ?? err.message}). Try --port 8788`);
   process.exit(1);
 }
+if (kiro.signedIn || kiro.demo) bridge.warmUpAgents(); // spare agent sessions get ready in the background (after listen: they need the bridge URL for their crew tools)
 const localUrl = `ws://127.0.0.1:${addr.port}/stream`;
 const discovery = join(homeDir(), 'bridge.json');
 mkdirSync(homeDir(), { recursive: true, mode: 0o700 });

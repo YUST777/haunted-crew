@@ -196,7 +196,7 @@ public final class ConsoleService {
 			});
 			return;
 		}
-		if (action.action().startsWith("wf_") || action.action().startsWith("agent_")) {
+		if (action.action().startsWith("wf_") || action.action().startsWith("agent_") || "kiro_usage".equals(action.action())) {
 			workflowAction(player, action);
 			return;
 		}
@@ -231,6 +231,15 @@ public final class ConsoleService {
 				body.addProperty("text", action.text());
 				path = "/agents/" + URLEncoder.encode(action.session(), StandardCharsets.UTF_8) + "/prompt";
 			}
+			case "model" -> {
+				if (action.session() == null || action.text() == null) return;
+				body.addProperty("model", action.text());
+				path = "/agents/" + URLEncoder.encode(action.session(), StandardCharsets.UTF_8) + "/model";
+			}
+			case "interrupt" -> {
+				if (action.session() == null) return;
+				path = "/agents/" + URLEncoder.encode(action.session(), StandardCharsets.UTF_8) + "/interrupt";
+			}
 			case "permission" -> {
 				if (action.session() == null || action.requestId() == null) return;
 				body.addProperty("requestId", action.requestId());
@@ -263,7 +272,7 @@ public final class ConsoleService {
 	 * "workflow_run" or "skills" views carrying the bridge's JSON.
 	 */
 	private void workflowAction(ServerPlayer player, ConsolePayloads.Action a) {
-		boolean read = "wf_list".equals(a.action()) || "wf_run_get".equals(a.action()) || "wf_skills".equals(a.action());
+		boolean read = "wf_list".equals(a.action()) || "wf_run_get".equals(a.action()) || "wf_skills".equals(a.action()) || "kiro_usage".equals(a.action());
 		if (!read && !canCommand(player)) {
 			notice(player, config.commandToken().isEmpty() ? "Watch-only: this server has no bridge command token." : "Only operators can change or run workflows.");
 			return;
@@ -273,6 +282,10 @@ public final class ConsoleService {
 		String id = a.session() == null ? "" : URLEncoder.encode(a.session(), StandardCharsets.UTF_8);
 		String method = "GET", path, body = null, reply = "workflows";
 		switch (a.action()) {
+			case "kiro_usage" -> {
+				path = "/kiro/usage";
+				reply = "usage";
+			}
 			case "wf_list" -> path = "/api/workflows";
 			case "wf_skills" -> {
 				path = "/api/skills";
