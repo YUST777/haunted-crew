@@ -11,10 +11,10 @@ export function CrewSection() {
   return (
     <section className="crew-section" id="crew" aria-labelledby="crew-title">
       <picture>
-        <source media="(max-width: 720px)" srcSet="/assets/crew-scene-1280.webp" />
+        <source media="(max-width: 720px)" srcSet="/assets/crew-scene-v3-1280.webp" />
         <img
           className="crew-scene"
-          src="/assets/crew-scene-2400.webp"
+          src="/assets/crew-scene-v3-2400.webp"
           alt="Six colorful ghost agents floating together in their moonlit haunted office."
           width={2400}
           height={1350}

@@ -75,13 +75,13 @@ export function Ghosts() {
     <div className="ghosts" ref={root} aria-hidden="true">
       <div className="ghost ghost-coder">
         <div className="ghost-float">
-          <img src="/assets/ghost-coder.webp" alt="" width={820} height={721} decoding="async" />
+          <img src="/assets/ghost-coder.webp" alt="" width={820} height={721} decoding="async" fetchPriority="low" />
         </div>
         <Sparks list={CODER_SPARKS} color="#3df2e0" />
       </div>
       <div className="ghost ghost-planner">
         <div className="ghost-float">
-          <img src="/assets/ghost-planner.webp" alt="" width={765} height={804} decoding="async" />
+          <img src="/assets/ghost-planner.webp" alt="" width={765} height={804} decoding="async" fetchPriority="low" />
         </div>
         <Sparks list={PLANNER_SPARKS} color="#5ff2a8" />
       </div>

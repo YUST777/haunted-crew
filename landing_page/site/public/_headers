@@ -1,0 +1,10 @@
+/assets/index-*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/routes-*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/poppins-*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/pixelify-*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/jetbrains-*
+  Cache-Control: public, max-age=31536000, immutable
