@@ -10,7 +10,7 @@ Kiro hooks ──POST /event (ingest token)──► bridge ──WS /stream (vi
 
 ```bash
 npm install
-node bin/haunted-crew.mjs [project] [--demo] [--port 8787] [--host 127.0.0.1] [--no-hooks] [--trust-all-tools]
+node bin/haunted-crew.mjs [project] [--demo] [--port 8787] [--host 127.0.0.1] [--no-hooks] [--trust-all-tools] [--worktrees]
 npm test
 ```
 
@@ -48,6 +48,15 @@ Env overrides: `HOST`, `PORT`, `HAUNTED_CREW_HOME`, `HAUNTED_CREW_INGEST_TOKEN`,
 | `POST /pair` | pairing code | `{ code }` → `{ view, command }`; single use, 10 min |
 | `GET /kiro/status` | view | `{ signedIn, installed, user }` via `kiro-cli whoami` |
 | `POST /kiro/login` | command | starts `kiro-cli login --use-device-flow`, returns `{ url, code }` |
+
+| `GET /api/workflows`, `POST /api/workflows/:id/run`, `GET /api/workflows/runs/:id` | view / command | Workflows, runs and their steps. |
+| `GET /api/merges`, `GET /api/merges/:run/diff` | view | Runs waiting for approval (needs `--worktrees`) and their diff. |
+| `POST /api/merges/:run/answer` | command | `{ option: "Merge" \| "Reject" \| "Request changes", text }`. |
+| `GET /api/history/search`, `/api/skills`, `/api/routines`, `/api/channels`, `/api/backup` | view / command | History, skills, routines (`every 30m`, `daily 09:00`, webhooks), channels, backup. |
+| `GET /kiro/usage` | command | Kiro credits used / total, plan, reset date (`kiro-cli /usage`, cached 60 s). |
+| `POST /browser/{open,click,type,key,scroll,back,forward,reload}` | command | Drive the shared headless Chrome (keys include `Control+a`, `Shift+Tab`). |
+| `POST /hooks/:id` | HMAC signature | Webhook routine trigger. |
+| `GET /tools`, `POST /tools/call` | per-agent session token | The crew MCP tools (`bin/crew-mcp.mjs`). |
 
 Failed auth and wrong pairing codes are limited to 20 attempts per minute per IP (then `429`).
 

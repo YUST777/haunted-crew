@@ -26,7 +26,8 @@ const VENDOR = {
   '/workflows/drawflow.min.css': ['text/css; charset=utf-8', readFileSync(new URL('./vendor/drawflow.min.css', import.meta.url))],
 };
 const MAX_BODY = 1024 * 1024;
-const KEYS = new Set(['Backspace', 'Enter', 'Tab', 'Escape', 'Delete', 'Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']);
+const KEYS = new Set(['Backspace', 'Enter', 'Tab', 'Escape', 'Delete', 'Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
+  'Control+a', 'Control+x', 'Control+z', 'Control+y', 'Shift+Tab', 'Shift+ArrowLeft', 'Shift+ArrowRight', 'Shift+Home', 'Shift+End']);
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
   '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' }; // PostToolUse can carry large tool output; we drop it after parsing.
@@ -63,7 +64,7 @@ function readBody(req) {
   });
 }
 
-export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agentOptions = null, kiroOptions = {}, previewRoot = agentOptions?.cwd ?? null, browserOptions = {}, ...stateOpts }) {
+export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agentOptions = null, kiroOptions = {}, previewRoot = agentOptions?.cwd ?? null, browserOptions = {}, worktrees = null, ...stateOpts }) {
   if (!tokens?.ingest || !tokens?.view) throw new Error('ingest and view tokens are required');
   let boundUrl = null; // http://127.0.0.1:<port>, set when listening; agents reach their crew tools there
   const state = createState(stateOpts);
@@ -73,7 +74,7 @@ export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agen
   const browser = createBrowser({ ...browserOptions, log });
   const edits = createEdits({ root: previewRoot });
   const history = createHistory({ root: previewRoot || undefined });
-  const workflows = createWorkflows({ root: previewRoot, agents, broadcast: (m) => broadcast(m), log, history });
+  const workflows = createWorkflows({ root: previewRoot, agents, broadcast: (m) => broadcast(m), log, history, worktrees });
   const tools = agents ? createTools({ agents, ...workflows.stores, history }) : null;
   const channels = createChannels({ root: previewRoot || undefined });
   const skillStore = previewRoot ? createSkillStore({ root: previewRoot }) : null;
@@ -140,6 +141,20 @@ export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agen
     if (req.method === 'GET' && parts[1] === 'workflows' && parts[2] === 'runs' && parts[3]) {
       const run = workflows.getRun(parts[3]);
       return run ? send(res, 200, run) : send(res, 404, { error: 'no such run' });
+    }
+    // Merge approvals: list and diff with the view token, answer with the command token.
+    if (parts[1] === 'merges') {
+      if (req.method === 'GET' && parts.length === 2) return send(res, 200, { enabled: Boolean(worktrees), merges: workflows.merges() });
+      try {
+        if (req.method === 'GET' && parts[3] === 'diff') return send(res, 200, { diff: await workflows.mergeDiff(parts[2]) });
+        if (req.method === 'POST' && parts[3] === 'answer') {
+          if (auth.role !== 'command') return send(res, 403, { error: 'command token required' });
+          const body = await readJson(req);
+          return send(res, 200, await workflows.answerMerge(parts[2], String(body.option), body.text));
+        }
+      } catch (err) {
+        return send(res, err.status ?? 400, { error: err.message });
+      }
     }
     const q = url.searchParams;
     if (req.method === 'GET' && parts[1] === 'history' && parts[2] === 'search') return send(res, 200, { results: history.search(q.get('q') ?? '', { agent: q.get('agent') || undefined, limit: Math.min(Number(q.get('limit')) || 10, 50) }) });

@@ -28,7 +28,7 @@ public final class ClientConsole {
 	/** Bumped on every change so the open screen can refresh its widgets. */
 	static int version;
 	// Workflow builder: the bridge's latest JSON answers (see WorkflowScreen).
-	static String workflows, workflowRun, workflowSaved, skills, usage;
+	static String workflows, workflowRun, workflowSaved, skills, usage, merges, mergeDiff, mergeAnswer;
 	static int workflowVersion;
 
 	private ClientConsole() {}
@@ -89,6 +89,15 @@ public final class ClientConsole {
 				return;
 			}
 			case "usage" -> usage = v.data();
+			case "merges", "merge_diff", "merge_answered" -> {
+				switch (v.type()) {
+					case "merges" -> merges = v.data();
+					case "merge_diff" -> mergeDiff = v.data();
+					default -> mergeAnswer = v.data();
+				}
+				workflowVersion++;
+				return;
+			}
 			case "notice" -> {
 				notice = v.notice();
 				noticeAt = System.currentTimeMillis();

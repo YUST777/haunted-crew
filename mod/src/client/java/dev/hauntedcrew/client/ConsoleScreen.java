@@ -571,6 +571,11 @@ public class ConsoleScreen extends Screen {
 		round(g, x, y, bx1, y + 16, wfHot ? 0xFF3A2C58 : CARD);
 		g.centeredText(font, "Workflows", (x + bx1) / 2, y + 4, wfHot ? PUMPKIN : DIM);
 		hits.add(new Hit(x, y, bx1, y + 16, () -> Minecraft.getInstance().gui.setScreen(new WorkflowScreen(this))));
+		y += 20;
+		boolean mgHot = hover(x, y, bx1, y + 16);
+		round(g, x, y, bx1, y + 16, mgHot ? 0xFF3A2C58 : CARD);
+		g.centeredText(font, "Merges", (x + bx1) / 2, y + 4, mgHot ? PUMPKIN : DIM);
+		hits.add(new Hit(x, y, bx1, y + 16, () -> Minecraft.getInstance().gui.setScreen(new MergeScreen(this))));
 		y += 24;
 
 		g.text(font, "CHANNELS", x, y, FAINT, shadow);

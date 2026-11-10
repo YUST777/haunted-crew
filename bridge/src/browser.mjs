@@ -19,8 +19,9 @@ const CANDIDATES = [
 ].filter(Boolean);
 
 export const VIEWPORT = { width: 1280, height: 598 }; // the office screen is 15 x 7 blocks
-// Rendered at 1.5x pixel density so text stays sharp on big windows.
-const SCALE = 1.5; // 1920 x 897: sharp enough on the 15-block wall, ~45% fewer pixels to encode, send and decode
+// 1x pixel density: Chrome's screencast delivers CSS-pixel frames, and the screenshot fallback must match their size
+// (mixed sizes made the game's texture flip between two resolutions).
+const SCALE = 1;
 const FRAME_INTERVAL_MS = 50; // at most ~20 frames a second to Minecraft
 const CAPTURE_EVERY_MS = 100;
 
@@ -74,13 +75,16 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
         userDataDir: join(homeDir(), 'browser'),
         args: ['--no-first-run', '--no-default-browser-check', '--disable-extensions', '--mute-audio', '--disk-cache-size=52428800',
           '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
-          '--enable-gpu-rasterization', '--enable-zero-copy'],
+          '--enable-gpu-rasterization', '--enable-zero-copy', '--disable-blink-features=AutomationControlled'],
+        ignoreDefaultArgs: ['--enable-automation'],
       });
       browser.on('disconnected', () => {
         clearTimeout(poll);
         browser = page = cdp = session = null;
       });
       page = await browser.newPage();
+      // Search sites serve bot challenges to "HeadlessChrome"; look like the normal Chrome this is.
+      await page.setUserAgent((await browser.userAgent()).replace('HeadlessChrome', 'Chrome'));
       cdp = true; // capture loop runs while set
       // Fast path: Chrome pushes a JPEG only when the picture changes (no polling, no full screenshots).
       const startCast = async () => {
@@ -95,7 +99,7 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
               emitFrame({ data: f.data, width: VIEWPORT.width * SCALE, height: VIEWPORT.height * SCALE, url: page?.url() ?? '' });
             }
           });
-          await session.send('Page.startScreencast', { format: 'jpeg', quality: 70, maxWidth: VIEWPORT.width * SCALE, maxHeight: VIEWPORT.height * SCALE, everyNthFrame: 1 });
+          await session.send('Page.startScreencast', { format: 'jpeg', quality: 80, maxWidth: VIEWPORT.width * SCALE, maxHeight: VIEWPORT.height * SCALE, everyNthFrame: 1 });
         } catch (err) {
           session = null; // screenshot polling below still works
         }
@@ -107,9 +111,9 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
       const capture = async () => {
         if (!cdp || !page) return;
         const started = Date.now();
-        // While the screencast is delivering, a slow safety screenshot once a second is enough.
-        if (session && started - lastCast < 1000 && started % 1000 > 150) {
-          poll = setTimeout(capture, 50);
+        // While the screencast is delivering, no screenshots: the screenshot loop only takes over if it goes quiet for 1.5 s (a static page sends nothing, so it checks then too).
+        if (session && started - lastCast < 1500) {
+          poll = setTimeout(capture, 100);
           return;
         }
         try {
@@ -186,7 +190,12 @@ export function createBrowser({ executablePath = findChrome(), log = console } =
     }),
     key: guard(async (name) => {
       const p = await start();
-      await p.keyboard.press(name);
+      // "Control+a" style combos: hold the modifiers, press the key, release.
+      const parts = name.split('+');
+      const key = parts.pop();
+      for (const m of parts) await p.keyboard.down(m);
+      await p.keyboard.press(key);
+      for (const m of parts.reverse()) await p.keyboard.up(m);
       return { ok: true };
     }),
     forward: guard(async () => {

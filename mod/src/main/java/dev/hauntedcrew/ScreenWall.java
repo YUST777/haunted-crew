@@ -123,8 +123,8 @@ public final class ScreenWall {
 		List<CrewProtocol.Session> needs = crew.stream().filter(s -> s.permission() != null).toList();
 
 		// Header bar with a pumpkin accent line.
-		panel(level, "header", 0.2, 6.25, 14.8, 6.85, Blocks.DARK_OAK_PLANKS.defaultBlockState());
-		rect(level, "accent", 0.2, 6.15, 14.8, 6.25, Blocks.GOLD_BLOCK.defaultBlockState());
+		panel(level, "header", 0.2, 6.25, 14.8, 6.85, Blocks.CONCRETE.gray().defaultBlockState());
+		rect(level, "accent", 0.2, 6.15, 14.8, 6.25, Blocks.CONCRETE.orange().defaultBlockState());
 		text(level, "title", 2.3, 6.36, 1.4, 0, false, c("HAUNTED CREW", ORANGE));
 		text(level, "stats", 10.2, 6.38, 1.1, 0, false, c(crew.size() + " on shift    " + working + " working    " + waiting + " waiting    " + errors + " errors", TEXT));
 		text(level, "live", 5.8, 6.38, 1.1, 0, false, c("connected".equals(bridge) ? "● live" : "● " + bridge, "connected".equals(bridge) ? 0x4ADE80 : WARN));
@@ -133,8 +133,8 @@ public final class ScreenWall {
 		for (int i = 0; i < 4; i++) {
 			double top = 5.95 - i * 1.32, bot = top - 1.2;
 			CrewProtocol.Session s = i < crew.size() ? crew.get(i) : null;
-			panel(level, "card" + i, 0.3, bot, 4.5, top, Blocks.DEEPSLATE.defaultBlockState());
-			rect(level, "strip" + i, 0.37, bot + 0.07, 0.5, top - 0.07, s == null ? Blocks.STONE.defaultBlockState() : statusBlock(s.status()), 0.008);
+			panel(level, "card" + i, 0.3, bot, 4.5, top, Blocks.CONCRETE.gray().defaultBlockState());
+			rect(level, "strip" + i, 0.37, bot + 0.07, 0.5, top - 0.07, s == null ? Blocks.CONCRETE.lightGray().defaultBlockState() : statusBlock(s.status()), 0.008);
 			Component body = s == null
 				? c(i == 0 ? "No ghosts yet" : "", DIM).copy().append("\n").append(c(i == 0 ? "Press K to summon one" : "", DIM))
 				: c(fit(s.label(), 16), TEXT).copy().append("\n").append(c(fit(s.activity(), 22), s.status() == CrewProtocol.Status.WAITING ? WARN : DIM));
@@ -142,7 +142,7 @@ public final class ScreenWall {
 		}
 
 		// Live activity panel (middle).
-		panel(level, "feedbg", 4.7, 0.3, 10.3, 5.95, Blocks.DEEPSLATE.defaultBlockState());
+		panel(level, "feedbg", 4.7, 0.3, 10.3, 5.95, Blocks.CONCRETE.gray().defaultBlockState());
 		double fScale = 1.05;
 		int fWidth = (int) (5.3 / (PX * fScale));
 		List<Component> feed = new ArrayList<>();
@@ -154,7 +154,7 @@ public final class ScreenWall {
 		text(level, "feed", 7.5, 0.42, fScale, fWidth, true, padded(feed, 18, fWidth));
 
 		// Needs you (right, top) turns orange when someone is waiting for approval.
-		panel(level, "needsbg", 10.5, 4.35, 14.7, 5.95, needs.isEmpty() ? Blocks.DEEPSLATE.defaultBlockState() : Blocks.CONCRETE.orange().defaultBlockState());
+		panel(level, "needsbg", 10.5, 4.35, 14.7, 5.95, needs.isEmpty() ? Blocks.CONCRETE.gray().defaultBlockState() : Blocks.CONCRETE.orange().defaultBlockState());
 		MutableComponent need = c("NEEDS YOU", needs.isEmpty() ? ORANGE : 0x2A1A05).copy();
 		if (needs.isEmpty()) need.append("\n").append(c("Nobody right now", DIM));
 		for (int i = 0; i < Math.min(2, needs.size()); i++) {
@@ -165,7 +165,7 @@ public final class ScreenWall {
 		text(level, "needs", 12.6, 4.5, 1.05, 0, false, need);
 
 		// Spec tasks (right, bottom), from Kiro task events.
-		panel(level, "tasksbg", 10.5, 0.3, 14.7, 4.15, Blocks.DEEPSLATE.defaultBlockState());
+		panel(level, "tasksbg", 10.5, 0.3, 14.7, 4.15, Blocks.CONCRETE.gray().defaultBlockState());
 		Map<String, Boolean> tasks = new LinkedHashMap<>();
 		for (CrewProtocol.Line l : lines) {
 			if ("task_start".equals(l.kind())) tasks.putIfAbsent(l.text().replaceFirst("^started task: ", ""), false);
@@ -224,7 +224,7 @@ public final class ScreenWall {
 
 	/** Minecraft-style panel: a dark blackstone frame with a lighter inset face (z-layered so nothing flickers). */
 	private void panel(ServerLevel level, String key, double x0, double y0, double x1, double y1, BlockState face) {
-		rect(level, key + "_f", x0, y0, x1, y1, Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 0);
+		rect(level, key + "_f", x0, y0, x1, y1, Blocks.CONCRETE.black().defaultBlockState(), 0);
 		rect(level, key, x0 + 0.07, y0 + 0.07, x1 - 0.07, y1 - 0.07, face, 0.004);
 	}
 

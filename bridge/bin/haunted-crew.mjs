@@ -11,6 +11,7 @@ import { homeDir, loadOrCreateTokens } from '../src/config.mjs';
 import { createBridge } from '../src/server.mjs';
 import { DEFAULT_MODEL } from '../src/agents.mjs';
 import { hookFile } from './install-hooks.mjs';
+import { createWorktrees, isGitRepo } from '../src/worktrees.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -23,7 +24,7 @@ const valueFlags = new Set(['--port', '--host', '--model']);
 const positional = args.filter((a, i) => !a.startsWith('--') && !valueFlags.has(args[i - 1]));
 
 if (flag('help')) {
-  console.log('usage: haunted-crew [project-folder] [--demo] [--port 8787] [--host 127.0.0.1] [--no-hooks] [--trust-all-tools] [--model claude-haiku-5.5] [--mcp]');
+  console.log('usage: haunted-crew [project-folder] [--demo] [--port 8787] [--host 127.0.0.1] [--no-hooks] [--trust-all-tools] [--model claude-haiku-5.5] [--mcp] [--worktrees]');
   process.exit(0);
 }
 
@@ -42,7 +43,7 @@ if (!existsSync(project) || !statSync(project).isDirectory()) {
 }
 
 console.log(c.purple('\n  👻  Haunted Crew') + c.dim('  — your Kiro agents, haunting Minecraft\n'));
-console.log(`  project  ${project}${demo ? c.warn('   (demo mode)') : ''}`);
+console.log(`  project  ${project}${demo ? c.warn('   (demo mode)') : ''}${flag('worktrees') ? c.dim('   (worktrees: merges need approval)') : ''}`);
 
 step(1, 'Kiro hooks');
 if (flag('no-hooks')) {
@@ -88,7 +89,13 @@ const agentOptions = {
   cwd: project,
   model,
 };
-const bridge = createBridge({ tokens, agentOptions, kiroOptions: { command: kiroCli, demo } });
+// --worktrees: every workflow run works on its own git branch; you approve the merge in the game.
+let worktrees = null;
+if (flag('worktrees')) {
+  if (await isGitRepo(project)) worktrees = createWorktrees({ repo: project });
+  else console.log(c.warn('  ! --worktrees needs the project folder to be a git repository; running without it'));
+}
+const bridge = createBridge({ tokens, agentOptions, kiroOptions: { command: kiroCli, demo }, worktrees });
 
 step(2, 'Kiro account');
 const kiro = await bridge.kiroStatus();

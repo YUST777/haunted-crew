@@ -196,7 +196,7 @@ public final class ConsoleService {
 			});
 			return;
 		}
-		if (action.action().startsWith("wf_") || action.action().startsWith("agent_") || "kiro_usage".equals(action.action())) {
+		if (action.action().startsWith("wf_") || action.action().startsWith("agent_") || action.action().startsWith("merge_") || "kiro_usage".equals(action.action())) {
 			workflowAction(player, action);
 			return;
 		}
@@ -272,7 +272,7 @@ public final class ConsoleService {
 	 * "workflow_run" or "skills" views carrying the bridge's JSON.
 	 */
 	private void workflowAction(ServerPlayer player, ConsolePayloads.Action a) {
-		boolean read = "wf_list".equals(a.action()) || "wf_run_get".equals(a.action()) || "wf_skills".equals(a.action()) || "kiro_usage".equals(a.action());
+		boolean read = "wf_list".equals(a.action()) || "wf_run_get".equals(a.action()) || "wf_skills".equals(a.action()) || "kiro_usage".equals(a.action()) || "merge_list".equals(a.action()) || "merge_diff".equals(a.action());
 		if (!read && !canCommand(player)) {
 			notice(player, config.commandToken().isEmpty() ? "Watch-only: this server has no bridge command token." : "Only operators can change or run workflows.");
 			return;
@@ -285,6 +285,21 @@ public final class ConsoleService {
 			case "kiro_usage" -> {
 				path = "/kiro/usage";
 				reply = "usage";
+			}
+			case "merge_list" -> {
+				path = "/api/merges";
+				reply = "merges";
+			}
+			case "merge_diff" -> {
+				path = "/api/merges/" + id + "/diff";
+				reply = "merge_diff";
+			}
+			case "merge_answer" -> {
+				// text is {"option": "Merge" | "Reject" | "Request changes", "text": "..."}; the bridge checks the command token
+				method = "POST";
+				path = "/api/merges/" + id + "/answer";
+				body = a.text();
+				reply = "merge_answered";
 			}
 			case "wf_list" -> path = "/api/workflows";
 			case "wf_skills" -> {
@@ -335,7 +350,7 @@ public final class ConsoleService {
 		if ((a.action().startsWith("wf_") && id.isEmpty() && (a.action().equals("wf_delete") || a.action().startsWith("wf_run") || a.action().equals("wf_stop")))) return;
 		HttpRequest.Builder req = bridgeRequest(path, token).header("Content-Type", "application/json");
 		req = body == null ? req.method(method, HttpRequest.BodyPublishers.noBody()) : req.method(method, HttpRequest.BodyPublishers.ofString(body));
-		boolean refreshAfter = !read && !"wf_run".equals(a.action()) && !"wf_stop".equals(a.action());
+		boolean refreshAfter = !read && !"wf_run".equals(a.action()) && !"wf_stop".equals(a.action()) && !"merge_answer".equals(a.action());
 		String replyType = reply;
 		http.sendAsync(req.build(), HttpResponse.BodyHandlers.ofString()).whenComplete((res, err) -> server.execute(() -> {
 			if (err != null) {

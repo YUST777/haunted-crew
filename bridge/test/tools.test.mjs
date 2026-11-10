@@ -81,3 +81,15 @@ test('bridge hands each agent a crew MCP server that works end to end', async ()
     await bridge.close();
   }
 });
+
+test('unread no-reply notes ride along on the next tool result (mid-turn steering)', async () => {
+  const d = deps({ list: () => [] });
+  const t = createTools(d);
+  const a = { name: 'A', session: '1' };
+  d.mailbox.send({ from: 'Lead', to: ['A'], text: 'use tabs', expectsReply: false });
+  d.mailbox.send({ from: 'Lead', to: ['A'], text: 'answer me', expectsReply: true });
+  const first = await t.call(a, 'list_tables');
+  assert.match(first, /\[NEW MESSAGES\]\n- from Lead: use tabs/);
+  assert.doesNotMatch(first, /answer me/); // expects a reply: delivered as a prompt instead
+  assert.doesNotMatch(await t.call(a, 'list_tables'), /NEW MESSAGES/); // delivered once
+});

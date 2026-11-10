@@ -42,6 +42,7 @@ public class ScreenRenderer extends EntityRenderer<ScreenEntity, ScreenRenderer.
 
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+		ScreenTexture.touch();
 		if (!ScreenTexture.ready()) return;
 		float hw = state.width / 2, h = state.height;
 		collector.submitCustomGeometry(poseStack, RenderTypes.entitySolid(ScreenTexture.ID), (pose, v) -> {

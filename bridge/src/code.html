@@ -46,6 +46,36 @@
   .empty { margin: auto; text-align: center; color: var(--dim); font-size: 26px; }
   .empty b { display: block; font-size: 72px; margin-bottom: 8px; }
   .status { position: fixed; right: 12px; bottom: 8px; font-size: 11px; color: var(--dim); }
+
+  /* ---- Minecraft theme (matches the in-game console: black frames, stone greys, gold accent, shadowed text) ---- */
+  :root {
+    --bg: #2b2b2b; --panel: #4a4a4a; --card: #3a3a3a; --line: #000000; --text: #ffffff; --dim: #bdbdbd; --faint: #8a8a8a;
+    --accent: #ffaa00; --pumpkin: #ffaa00; --ok: #55ff55; --warn: #ffaa00; --bad: #ff5555; --work: #55ffff;
+    --add: #1f5a1f; --add-fg: #55ff55; --del: #6a1f1f; --del-fg: #ff5555;
+    --kw: #ff55ff; --str: #55ff55; --num: #ffaa00; --com: #aaaaaa; --fn: #55ffff;
+  }
+  body, html { text-shadow: 2px 2px 0 #1a1a1a; font-weight: 600; image-rendering: pixelated;
+    background-image: linear-gradient(45deg, #00000012 25%, transparent 25%, transparent 75%, #00000012 75%), linear-gradient(45deg, #00000012 25%, transparent 25%, transparent 75%, #00000012 75%);
+    background-size: 8px 8px; background-position: 0 0, 4px 4px; }
+  header, aside, section, .card, .stat, .tab, .head, #auth, .crew.sel, .recent .r.on { border-radius: 0 !important; }
+  header, aside, section, .card, .stat, #auth { border: 2px solid #000 !important; box-shadow: inset 2px 2px 0 #ffffff40, inset -2px -2px 0 #00000070 !important; }
+  header { background: #4a4a4a !important; }
+  aside { background: #4a4a4a !important; border-width: 0 2px 0 0 !important; }
+  section { background: #3a3a3a !important; }
+  h2, aside h2 { color: #ffaa00 !important; letter-spacing: .06em !important; border-bottom: 2px solid #000 !important; }
+  .logo { color: #ffaa00 !important; }
+  .tabs { background: #4a4a4a !important; border-bottom: 2px solid #000 !important; }
+  .tab { background: #3a3a3a !important; border: 2px solid #000 !important; border-top: 3px solid #ffaa00 !important; }
+  .head { background: #3a3a3a; border-bottom: 2px solid #000 !important; }
+  .crew:hover { background: #555 !important; }
+  .crew.sel, .recent .r.on { background: #555 !important; box-shadow: inset 3px 0 0 #ffaa00 !important; border-left-color: #ffaa00 !important; }
+  .k-message .msg { background: #4a4a4a !important; border: 2px solid #000 !important; border-radius: 0 !important; }
+  .card.need { border-color: #ffaa00 !important; background: #5a4410 !important; }
+  .dot, .ghost, .conn { border-radius: 0 !important; box-shadow: none !important; }
+  .ln.add { background: #1f5a1f !important; } .ln.del { background: #6a1f1f !important; }
+  #auth input { background: #000 !important; border: 2px solid #8b8b8b !important; border-radius: 0 !important; }
+  #auth button { background: #6a6a6a !important; border: 2px solid #000 !important; border-radius: 0 !important; box-shadow: inset 2px 2px 0 #ffffff60, inset -2px -2px 0 #00000070 !important; }
+  ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #8b8b8b; border: 2px solid #000; }
 </style>
 </head>
 <body>

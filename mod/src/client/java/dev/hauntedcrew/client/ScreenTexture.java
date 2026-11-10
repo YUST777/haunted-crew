@@ -17,6 +17,14 @@ final class ScreenTexture {
 
 	private ScreenTexture() {}
 
+	static int width() {
+		return width;
+	}
+
+	static int height() {
+		return height;
+	}
+
 	static boolean ready() {
 		return texture != null;
 	}
@@ -36,21 +44,56 @@ final class ScreenTexture {
 	private static final java.util.concurrent.atomic.AtomicReference<byte[]> latestJpeg = new java.util.concurrent.atomic.AtomicReference<>();
 	private static final java.util.concurrent.atomic.AtomicReference<NativeImage> decoded = new java.util.concurrent.atomic.AtomicReference<>();
 
+	private static volatile long lastSeen;
+
+	/** Called whenever the wall (or the browser screen) is drawn; frames are only decoded while someone looks (the study's distance culling). */
+	static void touch() {
+		boolean wasHidden = !seen();
+		lastSeen = System.nanoTime();
+		if (wasHidden && latestJpeg.get() != null) decode();
+	}
+
+	private static boolean seen() {
+		return System.nanoTime() - lastSeen < 2_000_000_000L;
+	}
+
 	static void update(byte[] jpeg) {
 		latestJpeg.set(jpeg);
+		if (seen()) decode();
+	}
+
+	private static void decode() {
 		DECODER.execute(() -> {
 			byte[] bytes = latestJpeg.getAndSet(null);
 			if (bytes == null) return; // a newer frame already took this one's place
-			NativeImage img;
-			try {
-				img = NativeImage.read(bytes);
-			} catch (IOException | RuntimeException e) {
-				return;
-			}
+			NativeImage img = decodeJpeg(bytes);
+			if (img == null) return;
 			NativeImage stale = decoded.getAndSet(img);
 			if (stale != null) stale.close();
 			Minecraft.getInstance().execute(ScreenTexture::upload);
 		});
+	}
+
+	/** Minecraft's native (stb) reader first; ImageIO if it refuses JPEG. */
+	private static NativeImage decodeJpeg(byte[] bytes) {
+		try {
+			return NativeImage.read(bytes);
+		} catch (IOException | RuntimeException e) {
+			// not decodable natively; use ImageIO below
+		}
+		try {
+			java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(bytes));
+			if (src == null) return null;
+			int w = src.getWidth(), h = src.getHeight();
+			NativeImage out = new NativeImage(w, h, false);
+			int[] argb = src.getRGB(0, 0, w, h, null, 0, w);
+			for (int y = 0; y < h; y++) {
+				for (int x = 0; x < w; x++) out.setPixel(x, y, 0xFF000000 | argb[y * w + x]);
+			}
+			return out;
+		} catch (IOException | RuntimeException e) {
+			return null;
+		}
 	}
 
 	private static void upload() {

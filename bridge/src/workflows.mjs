@@ -6,6 +6,7 @@ import { createMailbox } from './mailbox.mjs';
 import { createMemory, extract as extractMemories } from './memory.mjs';
 import { createSharedData } from './shared-data.mjs';
 import { createRunStore } from './runstore.mjs';
+import { MergeError } from './worktrees.mjs';
 
 // Workflows: boxes and arrows drawn in the editor page (/workflows). A "start" box holds the task,
 // each "agent" box becomes a real ghost (a Kiro agent) that gets the task plus the results of the
@@ -215,7 +216,9 @@ export const parseData = (text) => lastJson(text, (o) => o.data && typeof o.data
 
 // ---------------------------------------------------------------- store + runner
 
-export function createWorkflows({ root, agents, broadcast = () => {}, log = console, history = null }) {
+export function createWorkflows({ root, agents, broadcast = () => {}, log = console, history = null, worktrees = null }) {
+  const wtPaths = new Map(); // run id -> worktree folder its ghosts work in
+  const cwdFor = (run) => (wtPaths.has(run.id) ? { cwd: wtPaths.get(run.id) } : {});
   const file = root ? join(resolve(root), '.haunted-crew', 'workflows.json') : null;
   let data = { workflows: [], agents: [] };
   if (file) {
@@ -284,7 +287,7 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
       try {
         if (!ghosts.has(m.id)) {
           const custom = m.data.agentId ? data.agents.find((a) => a.id === m.data.agentId) : null;
-          const g = await agents.create(m.data.name, m.data.model || custom?.model || undefined);
+          const g = await agents.create(m.data.name, m.data.model || custom?.model || undefined, cwdFor(run));
           ghosts.set(m.id, g.session); s.ghost = g.session; s.model = g.model;
         }
         const text = await agents.run(ghosts.get(m.id), prompt);
@@ -404,6 +407,13 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
   }
 
   async function execute(run, wf, task) {
+    if (worktrees) {
+      try {
+        wtPaths.set(run.id, (await worktrees.create(run.id)).path); // agents work on their own branch until you approve the merge
+      } catch (err) {
+        log.warn?.('[workflows] no worktree, agents work in the project:', err.message);
+      }
+    }
     const byId = new Map(wf.nodes.map((n) => [n.id, n]));
     // Boxes a lead points at are run by the lead, not by the arrows.
     const managed = new Map();
@@ -431,7 +441,7 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
         else if (node.type === 'end') text = inputs.map((i) => i.text).filter(Boolean).join('\n\n');
         else {
           const custom = node.data.agentId ? data.agents.find((a) => a.id === node.data.agentId) : null;
-          const ghost = await agents.create(node.data.name, node.data.model || custom?.model || undefined);
+          const ghost = await agents.create(node.data.name, node.data.model || custom?.model || undefined, cwdFor(run));
           s.ghost = ghost.session;
           s.model = ghost.model;
           changed(run);
@@ -452,16 +462,53 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
       promises.set(id, p);
       return p;
     };
+    let outcome;
     try {
       const ends = wf.nodes.filter((n) => !wf.edges.some((e) => e.from === n.id));
       const results = await Promise.all(ends.map((n) => step(n.id)));
       run.output = results.map((r) => r.text).filter(Boolean).join('\n\n').slice(0, 8000);
-      run.status = 'done';
+      outcome = 'done';
     } catch (err) {
-      run.status = run.status === 'stopped' ? 'stopped' : 'failed';
+      outcome = run.status === 'stopped' ? 'stopped' : 'failed';
       run.error = String(err.message).slice(0, 200);
     }
     run.endedAt = Date.now();
+    await proposeMerge(run, wf.name); // before the final status, so a finished run already shows its merge
+    run.status = outcome;
+    changed(run);
+  }
+
+  // The run's work sits on a branch. If it changed anything, it waits for approval in the game or dashboard.
+  async function proposeMerge(run, name) {
+    if (!wtPaths.has(run.id)) return;
+    try {
+      const sum = await worktrees.finish(run.id, `Haunted Crew: ${name}`.slice(0, 100));
+      if (sum) run.merge = { ...sum, status: 'pending' };
+      else { await worktrees.discard(run.id); wtPaths.delete(run.id); }
+    } catch (err) {
+      run.merge = { status: 'failed', error: String(err.message).slice(0, 200) };
+    }
+  }
+
+  const pendingRun = (runId) => {
+    const run = runs.find((r) => r.id === runId);
+    if (!run?.merge || !['pending', 'conflict'].includes(run.merge.status)) throw new AgentError(404, 'no merge waiting for approval on that run');
+    return run;
+  };
+
+  // A fresh ghost works in the run's worktree to fix a conflict or apply review feedback, then it is proposed again.
+  async function revise(run, prompt, label) {
+    const base = run.merge.base;
+    run.merge = { ...run.merge, status: 'revising' };
+    changed(run);
+    try {
+      const g = await agents.create(label, undefined, cwdFor(run));
+      await agents.run(g.session, prompt.replace('<base>', base));
+      const sum = await worktrees.finish(run.id, `Haunted Crew: ${label}`);
+      run.merge = sum ? { ...sum, status: 'pending', note: `${label} finished: review again` } : { ...run.merge, status: 'conflict', note: `${label} changed nothing` };
+    } catch (err) {
+      run.merge = { ...run.merge, status: 'conflict', note: `${label} failed: ${String(err.message).slice(0, 120)}` };
+    }
     changed(run);
   }
 
@@ -540,6 +587,49 @@ export function createWorkflows({ root, agents, broadcast = () => {}, log = cons
       if (run.status === 'running') run.status = 'stopped'; // steps already working finish; no new steps start
       changed(run);
       return publicRun(run);
+    },
+
+    /** Runs whose work waits for approval. */
+    merges: () => runs.filter((r) => r.merge && ['pending', 'conflict', 'revising'].includes(r.merge.status)).map((r) => ({ runId: r.id, name: r.name, ...r.merge })),
+
+    async mergeDiff(runId) {
+      pendingRun(runId);
+      return (await worktrees.diff(runId)).slice(0, 200_000);
+    },
+
+    /** option: "Merge" | "Reject" | "Request changes" (with text). */
+    async answerMerge(runId, option, text) {
+      if (!worktrees) throw new AgentError(503, 'worktrees are off (start the bridge with --worktrees)');
+      const run = pendingRun(runId);
+      if (option === 'Reject') {
+        await worktrees.discard(runId);
+        wtPaths.delete(runId);
+        run.merge = { ...run.merge, status: 'rejected' };
+        changed(run);
+        return { status: 'rejected' };
+      }
+      if (option === 'Request changes') {
+        const note = String(text ?? '').trim().slice(0, 2000);
+        if (!note) throw new AgentError(400, 'say what should change');
+        revise(run, `Review feedback on the work in this folder:\n${note}\n\nMake the changes in this folder. Do not push.`, 'Reviser');
+        return { status: 'revising' };
+      }
+      if (option !== 'Merge') throw new AgentError(400, 'option must be Merge, Reject or Request changes');
+      try {
+        const done = await worktrees.merge(runId, `Haunted Crew: ${run.name}`);
+        wtPaths.delete(runId);
+        run.merge = { ...run.merge, status: 'merged', sha: done.sha };
+        changed(run);
+        return { status: 'merged', sha: done.sha };
+      } catch (err) {
+        if (!(err instanceof MergeError)) throw err;
+        if (err.code === 'conflict') {
+          // Parallel work touched the same lines: the worktree merges the base into its branch and fixes it.
+          revise(run, `Your branch conflicts with <base> in: ${err.files.join(', ')}.\nIn this folder run: git merge <base>\nResolve every conflict (keep both sides' intent), then git add and git commit. Do not push.`, 'Resolver');
+          return { status: 'revising', reason: err.message };
+        }
+        throw new AgentError(409, err.message);
+      }
     },
 
     getRun: (runId) => {

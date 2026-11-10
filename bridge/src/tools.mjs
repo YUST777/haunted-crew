@@ -55,6 +55,15 @@ export function createTools({ agents, mailbox, memory, sharedData, history, wait
     }
   }
 
+  // Mid-turn steering (AgentCraft): unread no-reply notes (replies, FYIs) ride along on the next tool result.
+  // Messages that expect a reply are delivered as a prompt by sendMessage, so they are left alone here.
+  function pendingNotes(caller) {
+    const notes = mailbox.inbox(caller.name).filter((m) => !m.expectsReply);
+    if (!notes.length) return '';
+    for (const n of notes) mailbox.markRead(n.deliveryId);
+    return `\n\n[NEW MESSAGES]\n${notes.map((n) => `- from ${n.from}: ${n.text}`).join('\n')}`;
+  }
+
   const handlers = {
     send_message: sendMessage,
     list_agents: async () => agents.list().map((a) => ({ name: a.name, busy: a.busy })),
@@ -79,7 +88,8 @@ export function createTools({ agents, mailbox, memory, sharedData, history, wait
     async call(caller, name, args = {}) {
       const h = handlers[name];
       if (!h) throw new Error(`unknown tool "${name}"`);
-      return text(await h(caller, args && typeof args === 'object' ? args : {}));
+      const result = text(await h(caller, args && typeof args === 'object' ? args : {}));
+      return result + pendingNotes(caller);
     },
   };
 }

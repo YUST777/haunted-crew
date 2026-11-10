@@ -22,6 +22,26 @@ const NAME_RE = /^[\w .-]{1,40}$/;
 const MODEL_RE = /^[\w.:-]{1,64}$/;
 export const MAX_AGENTS = 70;
 // Cheap (0.06x credits) and fast: a good default for a crew of many ghosts.
+/**
+ * Agents never push with the user's credentials: network git protocols are off and every push URL is
+ * rewritten to a dead one (AgentCraft's sandbox). Local git (status, diff, commit, branch) still works.
+ * Set HAUNTED_CREW_ALLOW_GIT_NETWORK=1 to let agents fetch and push.
+ */
+export function agentEnv(env = process.env) {
+  if (env.HAUNTED_CREW_ALLOW_GIT_NETWORK === '1') return env;
+  const start = Math.max(0, Number(env.GIT_CONFIG_COUNT) || 0); // keep the user's own GIT_CONFIG_* entries
+  const off = 'haunted-crew-signing-disabled';
+  const pairs = [
+    ['protocol.allow', 'never'],
+    ['url.haunted-crew-push-blocked:///.pushInsteadOf', ''],
+    ['commit.gpgsign', 'false'], ['tag.gpgsign', 'false'],
+    ['gpg.program', off], ['gpg.ssh.program', off], ['gpg.x509.program', off],
+  ];
+  const out = { ...env, GIT_ALLOW_PROTOCOL: 'haunted-crew-none', GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', GIT_CONFIG_COUNT: String(start + pairs.length) };
+  pairs.forEach(([k, v], i) => { out[`GIT_CONFIG_KEY_${start + i}`] = k; out[`GIT_CONFIG_VALUE_${start + i}`] = v; });
+  return out;
+}
+
 export const DEFAULT_MODEL = 'claude-haiku-5.5';
 
 export class AgentError extends Error {
@@ -67,7 +87,7 @@ export function createAgentManager({
 
   function connect(w) {
     if (w.ready) return w.ready;
-    const conn = new AcpConnection({ command, args: procArgs, cwd });
+    const conn = new AcpConnection({ command, args: procArgs, cwd, env: agentEnv() });
     w.conn = conn;
     conn.on('update', onUpdate);
     conn.on('permission', (p) => onPermission(w, p));
@@ -104,7 +124,7 @@ export function createAgentManager({
     return w.ready;
   }
 
-  async function newSession(w) {
+  async function newSession(w, sessionCwd = cwd) {
     await connect(w);
     let res;
     let mcpToken = null;
@@ -112,7 +132,7 @@ export function createAgentManager({
       const url = process.env.HAUNTED_CREW_MCP === '0' ? null : mcpUrl?.();
       mcpToken = url ? randomUUID() : null;
       const mcpServers = url ? [{ name: 'crew', command: process.execPath, args: [crewMcp], env: [{ name: 'HC_BRIDGE_URL', value: url }, { name: 'HC_TOKEN', value: mcpToken }] }] : [];
-      res = await w.conn.request('session/new', { cwd, mcpServers }, sessionTimeoutMs);
+      res = await w.conn.request('session/new', { cwd: sessionCwd, mcpServers }, sessionTimeoutMs);
     } catch (err) {
       // Typically "authentication required" when kiro-cli is signed out.
       throw new AgentError(502, `Kiro could not start an agent: ${clean(err.message, 160)}`);
@@ -153,7 +173,7 @@ export function createAgentManager({
       event(sessionId, 'tool_start', {
         tool: clean(update.title, 64),
         category: KIND_TO_CATEGORY[update.kind] ?? 'other',
-        file: safePath(update.locations?.[0]?.path, cwd),
+        file: safePath(update.locations?.[0]?.path, a.cwd ?? cwd),
       });
     } else if (type === 'tool_call_update' && (update.status === 'completed' || update.status === 'failed')) {
       // Updates usually omit the title; reuse the one from the matching tool_call.
@@ -261,7 +281,8 @@ export function createAgentManager({
       for (const w of workers) refill(w);
     },
 
-    async create(name, wanted) {
+    /** opts.cwd: start the agent in another folder (a git worktree); such sessions skip the spare pool. */
+    async create(name, wanted, opts = {}) {
       if (typeof name !== 'string' || !NAME_RE.test(name.trim())) throw new AgentError(400, 'name must be 1-40 letters, digits, spaces, . - _');
       const modelId = wanted == null || wanted === '' ? defaultModel : String(wanted);
       if (!MODEL_RE.test(modelId)) throw new AgentError(400, 'bad model id');
@@ -273,17 +294,17 @@ export function createAgentManager({
       creating++;
       let s;
       try {
-        const spare = w.spare;
-        w.spare = null;
-        s = (spare && (await spare)) || (await newSession(w));
+        const spare = opts.cwd ? null : w.spare; // a worktree session needs its own cwd, so it leaves the spare alone
+        if (!opts.cwd) w.spare = null;
+        s = (spare && (await spare)) || (await newSession(w, opts.cwd));
         // The model list arrives with the first session: check again, and keep the session for later.
         if (models && !models.some((m) => m.id === modelId)) {
-          if (!w.spare) w.spare = Promise.resolve(s);
+          if (!w.spare && !opts.cwd) w.spare = Promise.resolve(s);
           throw new AgentError(400, `Kiro has no model "${clean(modelId, 64)}"`);
         }
         if (s.model !== modelId) {
           await w.conn.request('session/set_model', { sessionId: s.session, modelId }, sessionTimeoutMs).catch((err) => {
-            if (!w.spare) w.spare = Promise.resolve(s); // still a good session: keep it for the next summon
+            if (!w.spare && !opts.cwd) w.spare = Promise.resolve(s); // still a good session: keep it for the next summon
             throw new AgentError(502, `Kiro could not switch to ${clean(modelId, 64)}: ${clean(err.message, 120)}`);
           });
         }
@@ -294,7 +315,7 @@ export function createAgentManager({
         creating--;
       }
       agents.set(s.session, {
-        name: name.trim(), model: modelId, worker: w, busy: false, queue: [], reply: '', thought: '', permission: undefined, tools: new Map(), draftTimer: null,
+        name: name.trim(), model: modelId, cwd: opts.cwd, worker: w, busy: false, queue: [], reply: '', thought: '', permission: undefined, tools: new Map(), draftTimer: null,
       });
       if (s.token) tokens.set(s.token, s.session);
       event(s.session, 'session_start', { model: modelId });
