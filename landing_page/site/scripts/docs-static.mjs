@@ -27,7 +27,11 @@ mkdirSync(join(pub, 'docs'), { recursive: true });
 const pages = files.map((name) => {
   const md = clean(readFileSync(join(src, `${name}.md`), 'utf8'));
   const title = md.match(/^#\s+(.+)$/m)?.[1] ?? name;
-  const summary = md.split('\n').find((l) => l.trim() && !l.startsWith('#') && !l.startsWith('|') && !l.startsWith('<') && !l.startsWith('*Screenshot'))?.trim() ?? '';
+  let fence = false;
+  const summary = md.split('\n').map((l) => l.trim()).find((l) => {
+    if (l.startsWith('```')) { fence = !fence; return false; }
+    return !fence && l.length > 50 && !/^[#|<>*\-\d]/.test(l);
+  }) ?? '';
   writeFileSync(join(pub, 'docs', `${name}.md`), md);
   return { name, title, summary, md };
 });
@@ -41,6 +45,6 @@ const intro = `# Haunted Crew
 - Everything below is plain markdown generated from the repository's /docs folder.
 `;
 
-writeFileSync(join(pub, 'llms.txt'), `${intro}\n## Documentation\n\n${pages.map((p) => `- [${p.title}](${SITE}/docs/${p.name}.md): ${p.summary.slice(0, 220)}`).join('\n')}\n\n## Full text\n\n- [All documentation in one file](${SITE}/llms-full.txt)\n`);
+writeFileSync(join(pub, 'llms.txt'), `${intro}\n## Documentation\n\n${pages.map((p) => `- [${p.title}](${SITE}/docs/${p.name}.md): ${p.summary.replace(/\*\*/g, '').slice(0, 240)}`).join('\n')}\n\n## Full text\n\n- [All documentation in one file](${SITE}/llms-full.txt)\n`);
 writeFileSync(join(pub, 'llms-full.txt'), `${intro}\n${pages.map((p) => `\n---\n\n<!-- page: ${SITE}/docs/${p.name}.md -->\n\n${p.md.trim()}\n`).join('')}`);
 console.log(`docs-static: ${pages.length} pages -> llms.txt, llms-full.txt, docs/*.md`);
