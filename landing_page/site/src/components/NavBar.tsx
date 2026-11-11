@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
+const DOCS = 'https://github.com/YUST777/haunted-crew/tree/main/docs';
+
 const LINKS = [
   { label: 'The crew', href: '#crew' },
   { label: 'Workflows', href: '#features' },
@@ -54,6 +56,9 @@ export function NavBar() {
               <a href={l.href} onClick={() => setMenuOpen(false)}>{l.label}</a>
             </li>
           ))}
+          <li>
+            <a href={DOCS} target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}>Docs</a>
+          </li>
         </ul>
       </nav>
     </header>
