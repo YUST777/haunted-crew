@@ -221,6 +221,15 @@ thread, and skips decoding while nobody is looking at a screen.
   checks to headless browsers.
 - Minecraft 26.3 only.
 
+## Documentation
+
+Full docs live in [docs/](docs/README.md) and on the site at https://haunted-crew.pages.dev/docs. For AI agents and scripts the same content is plain markdown at https://haunted-crew.pages.dev/llms.txt (index) and https://haunted-crew.pages.dev/llms-full.txt (everything in one file).
+
+- [Kiro integration](docs/kiro-integration.md): exactly how and where Kiro is used.
+- [Mod reference](docs/mod-reference.md): every item, block, entity, command, screen, payload and config key.
+- [Bridge reference](docs/bridge-reference.md): every flag, env var, HTTP route, event kind and crew tool.
+- [Workflows](docs/workflows.md), [Reviewed merges](docs/merges.md), [Security](docs/security.md), [Architecture](docs/architecture.md).
+
 ## Develop
 
 ```bash

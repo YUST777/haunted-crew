@@ -1,12 +1,10 @@
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
-const DOCS = 'https://github.com/YUST777/haunted-crew/tree/main/docs';
-
 const LINKS = [
-  { label: 'The crew', href: '#crew' },
-  { label: 'Workflows', href: '#features' },
-  { label: 'About', href: '#about' },
+  { label: 'The crew', href: '/#crew' },
+  { label: 'Workflows', href: '/#features' },
+  { label: 'About', href: '/#about' },
 ];
 
 export function GhostIcon({ size = 32 }: { size?: number }) {
@@ -57,7 +55,7 @@ export function NavBar() {
             </li>
           ))}
           <li>
-            <a href={DOCS} target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}>Docs</a>
+            <Link to="/docs" onClick={() => setMenuOpen(false)} activeProps={{ className: 'active' }}>Docs</Link>
           </li>
         </ul>
       </nav>

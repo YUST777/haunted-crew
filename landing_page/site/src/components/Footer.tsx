@@ -7,16 +7,16 @@ const COLUMNS = [
   {
     title: 'Product',
     links: [
-      { label: 'Home', href: '#home' },
-      { label: 'The crew', href: '#crew' },
-      { label: 'Workflows', href: '#features' },
+      { label: 'Home', href: '/#home' },
+      { label: 'The crew', href: '/#crew' },
+      { label: 'Workflows', href: '/#features' },
     ],
   },
   {
     title: 'Resources',
     links: [
       { label: 'GitHub', href: REPO },
-      { label: 'Docs', href: `${REPO}#readme` },
+      { label: 'Docs', href: '/docs' },
       { label: 'Issues', href: `${REPO}/issues` },
     ],
   },

@@ -5,6 +5,9 @@ draws the ghosts and the console, and everything the agents do shows up in the w
 
 | Page | What it covers |
 |---|---|
+| [Kiro integration](kiro-integration.md) | Exactly how and where Kiro is used: ACP, hooks, agent profile, MCP, skills, credits, plugin. |
+| [Mod reference](mod-reference.md) | Every item, block, entity, command, key, screen, payload and config key in the Minecraft mod. |
+| [Bridge reference](bridge-reference.md) | Every flag, env var, HTTP route, event kind, crew tool and module in the bridge. |
 | [Architecture](architecture.md) | The three parts, the data flow, and why it is built this way. |
 | [Bridge](bridge.md) | Every bridge module: ACP, agents, workflows, memory, database, routines, browser, backup. |
 | [Workflows](workflows.md) | Lead delegation, templates, custom agents, the crew tools, mid-turn steering. |
@@ -13,7 +16,6 @@ draws the ghosts and the console, and everything the agents do shows up in the w
 | [Minecraft mod](mod.md) | Ghost entities, the office, console, workflow editor, merge screen, rendering. |
 | [Security](security.md) | Tokens, pairing, the git sandbox, approvals, privacy. |
 | [Testing](testing.md) | The test suite and how to check the whole system. |
-| [Recording a demo](demo.md) | A shot list for a two to three minute walkthrough. |
 
 Quick start lives in the [main README](../README.md). The HTTP API table is in [bridge/README.md](../bridge/README.md).
 

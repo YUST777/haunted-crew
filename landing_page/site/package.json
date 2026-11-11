@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prebuild": "node scripts/docs-static.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/pixelify-sans": "^5.3.0",
     "@fontsource/poppins": "^5.3.0",
     "@tanstack/react-router": "^1.170.46",
+    "marked": "^15.0.12",
     "react": "~19.3.1",
     "react-dom": "~19.3.1"
   },

@@ -1865,3 +1865,47 @@ a {
 @media (min-width: 1100px) {
   .hero-content { top: -40px; }
 }
+
+/* ------------------------------------------------------------------ docs */
+
+.docs {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 110px 24px 96px;
+}
+
+.docs-nav { position: sticky; top: 96px; align-self: start; display: grid; gap: 12px; font-family: 'Poppins', system-ui, sans-serif; font-size: 14px; }
+.docs-nav h2 { margin: 0; font-family: var(--font-ui); font-size: 22px; color: var(--green-hi); }
+.docs-nav ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.docs-nav a { display: block; padding: 6px 10px; color: var(--ink-dim); border-left: 2px solid transparent; }
+.docs-nav a:hover { color: var(--ink); }
+.docs-nav a.active { color: var(--green-hi); border-left-color: var(--green-hi); background: rgba(54, 224, 124, 0.06); }
+.docs-nav > a { font-size: 12px; margin-top: 8px; }
+
+.docs-body { min-width: 0; font-family: 'Poppins', system-ui, sans-serif; font-size: 15px; line-height: 1.7; color: var(--ink-soft); }
+.docs-body h1, .docs-body h2, .docs-body h3 { font-family: var(--font-ui); color: var(--ink); line-height: 1.2; }
+.docs-body h1 { margin: 0 0 20px; font-size: clamp(30px, 4vw, 44px); }
+.docs-body h2 { margin: 40px 0 12px; font-size: 26px; color: var(--green-hi); }
+.docs-body h3 { margin: 28px 0 8px; font-size: 20px; }
+.docs-body a { color: var(--cyan); }
+.docs-body a:hover { text-decoration: underline; }
+.docs-body code { padding: 2px 6px; font-family: var(--font-mono); font-size: 0.88em; color: var(--ink); background: rgba(255, 255, 255, 0.07); }
+.docs-body pre { overflow-x: auto; padding: 16px 18px; background: rgba(8, 12, 18, 0.9); border: 1px solid var(--panel-edge); }
+.docs-body pre code { padding: 0; background: none; font-size: 13px; line-height: 1.55; }
+.docs-body img { display: block; max-width: 100%; height: auto; margin: 24px auto; border: 2px solid var(--panel-edge); }
+.docs-body table { display: block; overflow-x: auto; border-collapse: collapse; margin: 16px 0; }
+.docs-body th, .docs-body td { padding: 8px 14px; text-align: left; border: 1px solid var(--panel-edge); vertical-align: top; }
+.docs-body th { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
+.docs-body blockquote { margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--green); color: var(--ink-dim); }
+.docs-body li { margin: 4px 0; }
+
+@media (max-width: 860px) {
+  .docs { grid-template-columns: 1fr; gap: 24px; padding-top: 96px; }
+  .docs-nav { position: static; }
+  .docs-nav ul { grid-auto-flow: column; overflow-x: auto; }
+  .docs-nav a { white-space: nowrap; border-left: 0; border-bottom: 2px solid transparent; }
+  .docs-nav a.active { border-bottom-color: var(--green-hi); }
+}
