@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Bridge tests on save",
+      "trigger": "PostFileSave",
+      "description": "Runs the bridge's 159 node:test tests whenever a bridge source, launcher or test file is saved.",
+      "matcher": "bridge/(src|bin|test)/[^/]+\\.(mjs|html)$",
+      "action": {
+        "type": "command",
+        "command": "tools/kiro/check.sh bridge",
+        "timeout": 240
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Keep docs true to the code",
+      "trigger": "PostFileSave",
+      "description": "After bridge or mod source edits, reminds the agent to update docs/*.md so the published docs keep matching the code.",
+      "matcher": "(bridge/(src|bin)/|mod/src/main/|mod/src/client/).*\\.(mjs|java)$",
+      "action": {
+        "type": "agent",
+        "prompt": "A bridge or mod source file was just saved. Before you finish, check whether the change alters anything documented in docs/*.md (endpoints, hook triggers, limits, timeouts, file paths, commands, test counts, Kiro integration). If it does, update the matching doc in the same change, following .kiro/steering/writing-style.md. The docs promise that every statement was checked against the source, so never leave a stale number or name. If nothing documented changed, say so in one line."
+      }
+    }
+  ]
+}

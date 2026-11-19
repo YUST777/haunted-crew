@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Haunted Crew: UserPromptSubmit",
+      "trigger": "UserPromptSubmit",
+      "description": "Forward event metadata to the Haunted Crew bridge; the prompt text itself is dropped by the bridge (always exits 0, prints nothing).",
+      "action": {
+        "type": "command",
+        "command": "node bridge/bin/send-event.mjs UserPromptSubmit",
+        "timeout": 5
+      }
+    }
+  ]
+}

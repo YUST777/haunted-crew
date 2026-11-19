@@ -30,7 +30,7 @@ Haunted Crew is a bridge (Node.js, in `bridge/`) and a Minecraft mod (Java, in `
 | Account, sign-in and credits | `kiro-cli whoami`, `kiro-cli login --use-device-flow`, `kiro-cli chat --no-interactive /usage` | `bridge/src/kiro.mjs` |
 | Installing the project into Kiro | A generated agent profile `.kiro/agents/haunted-crew.json`, a plugin manifest, a setup skill and an install prompt | `bin/haunted-crew.mjs`, `plugin.json`, `skills/haunted-crew-setup/SKILL.md`, `INSTALL_PROMPT.md` |
 
-The repository itself contains no `.kiro/` folder. The `.kiro/` files are written into the user's project folder when the launcher starts (see [The generated agent profile](#the-generated-agent-profile) and [The hook file](#the-hook-file-and-the-kiro-hook-events)).
+The repository's own `.kiro/` folder (specs, steering and hooks used to build this project, see [.kiro/README.md](../.kiro/README.md)) is separate from the files the launcher writes into a user's project folder when it starts (see [The generated agent profile](#the-generated-agent-profile) and [The hook file](#the-hook-file-and-the-kiro-hook-events)).
 
 ## Architecture
 
@@ -292,15 +292,15 @@ Kiro's task events drive the task wall in the Haunted Office:
 - `src/state.mjs` sets the ghost's `task` on `task_start` and clears it on the matching `task_end`.
 - The big-screen dashboard lists the tasks: a started task is shown unchecked and an ended task is shown checked (`ScreenWall.java`: `task_start` puts the task as not done, `task_end` as done).
 
-The repository has no Kiro spec files (`.kiro/specs/` does not exist here). The task wall works from the hook events only.
+The task wall works from the hook events only and does not read spec files. The repository has its own specs in `.kiro/specs/` (`hook-event-bridge`, `reviewed-merges`, `steve-chase-section`); the bridge never reads them.
 
 ## Steering and skills
 
 ### Steering
 
-- The repository contains no `.kiro/steering/` folder (checked with `find` and `git ls-files`).
+- This repository's `.kiro/steering/` holds nine steering files for building Haunted Crew itself (product, tech, structure, privacy and safety, writing style, and one each for bridge, mod, site and Blender assets). They are for developers using Kiro on this repo, not part of what the launcher installs.
 - The generated profile lists `file://.kiro/steering/**/*.md` as a resource, so a project with steering files gives its ghosts those files as context.
-- `PLAN.md` lists Kiro steering as planned work. It was not part of this repository when it was checked.
+- A user's project gets steering only if the user writes it; the launcher does not create steering files.
 
 ### Skills: where SKILL.md files are found
 
@@ -437,8 +437,8 @@ Workflow teammates are also told how to reach the same tools without MCP: they c
 | MCP servers in `session/new` | Yes | The `crew` server with per-session token and 12 tools. | `bridge/bin/crew-mcp.mjs`, `bridge/src/tools.mjs` |
 | `--trust-all-tools` | Optional | Passed to `kiro-cli acp` when the launcher flag is used. | `bin/haunted-crew.mjs` |
 | `SKILL.md` skills (`.kiro/skills/`, `skills/`, `.claude/skills/`) | Yes | Discovered for custom agents; written by the skill store. | `bridge/src/workflows.mjs`, `bridge/src/skillstore.mjs` |
-| Steering (`.kiro/steering/*.md`) | Referenced, not present | Listed as a profile resource. No steering files are in the repository. | `bin/haunted-crew.mjs`, `PLAN.md` |
-| Spec files (`.kiro/specs/`) | Not present | Spec tasks arrive through the task hooks only. | `PLAN.md` (planned work) |
+| Steering (`.kiro/steering/*.md`) | Yes | Listed as a profile resource for a user's project. This repository also has nine steering files of its own for building it. | `bin/haunted-crew.mjs`, `.kiro/steering/` |
+| Spec files (`.kiro/specs/`) | Yes, for development | Three specs with requirements, design and tasks. The bridge does not read specs; spec task events arrive through the task hooks. | `.kiro/specs/`, `.kiro/README.md` |
 | Plugin manifest and Kiro Power install | Yes | `plugin.json`, setup skill, install prompt. | `plugin.json`, `skills/haunted-crew-setup/SKILL.md`, `INSTALL_PROMPT.md` |
 | Kiro IDE and CLI hooks (watch-only ghosts) | Yes | Events from Kiro sessions shown as ghosts that cannot be prompted. | `src/normalize.mjs`, `src/agents.mjs` |
 
@@ -448,7 +448,7 @@ Checked in this repository:
 
 - Every command, flag, JSON field, hook trigger and endpoint named above appears in the source files cited.
 - The generated profile and hook file are produced by the launcher and `install-hooks.mjs` exactly as described.
-- The repository has no tracked `.kiro/` folder (`git ls-files` finds none).
+- The repository has a `.kiro/` folder at its root with `specs/`, `steering/` and `hooks/`, and it is not gitignored (`git check-ignore` reports nothing for it).
 
 Not verified here, and marked as such:
 

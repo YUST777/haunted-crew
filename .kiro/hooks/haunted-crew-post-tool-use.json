@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Haunted Crew: PostToolUse",
+      "trigger": "PostToolUse",
+      "description": "Forward tool result (ok or failed) to the Haunted Crew bridge; output is dropped (always exits 0, prints nothing).",
+      "action": {
+        "type": "command",
+        "command": "node bridge/bin/send-event.mjs PostToolUse",
+        "timeout": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Haunted Crew: PostTaskExec",
+      "trigger": "PostTaskExec",
+      "description": "Tick the spec task off on the Haunted Office task wall (always exits 0, prints nothing).",
+      "action": {
+        "type": "command",
+        "command": "node bridge/bin/send-event.mjs PostTaskExec",
+        "timeout": 5
+      }
+    }
+  ]
+}

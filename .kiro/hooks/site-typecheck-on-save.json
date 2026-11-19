@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Site typecheck on save",
+      "trigger": "PostFileSave",
+      "description": "Runs tsc --noEmit on the website after a .ts or .tsx file is saved (about 1 s).",
+      "matcher": "landing_page/site/src/.*\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "npm --prefix landing_page/site run -s typecheck",
+        "timeout": 60
+      }
+    }
+  ]
+}

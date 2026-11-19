@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Haunted Crew: PostFileCreate",
+      "trigger": "PostFileCreate",
+      "description": "Forward the project-relative file path to the Haunted Crew bridge (always exits 0, prints nothing).",
+      "action": {
+        "type": "command",
+        "command": "node bridge/bin/send-event.mjs PostFileCreate",
+        "timeout": 5
+      }
+    }
+  ]
+}

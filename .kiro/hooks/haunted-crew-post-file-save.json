@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Haunted Crew: PostFileSave",
+      "trigger": "PostFileSave",
+      "description": "Forward the project-relative file path to the Haunted Crew bridge for the live code view (always exits 0, prints nothing).",
+      "action": {
+        "type": "command",
+        "command": "node bridge/bin/send-event.mjs PostFileSave",
+        "timeout": 5
+      }
+    }
+  ]
+}

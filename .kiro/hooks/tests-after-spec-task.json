@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "All checks after a spec task",
+      "trigger": "PostTaskExec",
+      "description": "When a spec task is marked done: bridge tests, site typecheck and build, and mod tests when JDK 25 is installed.",
+      "action": {
+        "type": "command",
+        "command": "tools/kiro/check.sh",
+        "timeout": 600
+      }
+    }
+  ]
+}
