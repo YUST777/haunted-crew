@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "prebuild": "node scripts/docs-static.mjs"
+    "prebuild": "node scripts/docs-static.mjs",
+    "postbuild": "node scripts/prerender.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",

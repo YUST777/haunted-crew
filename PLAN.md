@@ -4,7 +4,7 @@
 **Deadline:** Fri Dec 4, 2026, 2:00 PM PT
 **Pitch:** Agents are black boxes and terminal walls. Haunted Crew turns your Kiro agents into ghosts working in a haunted Minecraft office, with a giant live screen and friends who can join and watch.
 
-## Status (2026-11-04)
+## Status (2026-11-04, early planning snapshot; the current status is in README.md)
 
 Done and tested (bridge: 22 tests, mod: 12 tests, plus live runs in the game):
 - `haunted-crew` launcher: Kiro hooks install, Kiro sign-in check, bridge, zero-config discovery on the same PC, pairing codes, `--demo`.

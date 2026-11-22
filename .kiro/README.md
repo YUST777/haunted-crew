@@ -20,7 +20,7 @@ checkboxes show what is done. Open tasks are real gaps, not decoration.
 |---|---|---|
 | `specs/hook-event-bridge/` | Built. Tasks 1 to 7 done, 8 to 10 open (real Kiro payload fixtures, limiter 429 test, session state tests). | Installing hooks, forwarding metadata only, mapping events to ghost status, auth. |
 | `specs/reviewed-merges/` | Built. Tasks 1 to 9 done, 10 to 12 open (detached HEAD, Request changes and Resolver, 503 without worktrees). | Worktree per run, diff review in Minecraft, safe merge, reject, request changes. |
-| `specs/steve-chase-section/` | Planned. Nothing built yet; the Steve model is not verified. | A 3D website section where Steve chases the six ghosts. |
+| `specs/steve-chase-section/` | Not built: left out of the hackathon scope. Kept as a future idea. | A 3D website section where Steve chases the six ghosts. |
 
 How these specs were made: the first two were written after the code they describe, from the source and tests, then
 checked against them. The test coverage statements list only what the test files really cover. The third was written

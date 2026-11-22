@@ -51,6 +51,14 @@ Friends can join the server and watch your crew work.
 </tr>
 </table>
 
+## Try it fast (judges)
+
+- **Demo video:** _YouTube link added on submission._ The 20 s trailer: https://youtu.be/P3XXjgptBRY
+- **No Minecraft?** Run `node bridge/bin/haunted-crew.mjs --demo` (after `cd bridge && npm install`) and open
+  the read-only dashboard link it prints, or the workflow editor at `http://127.0.0.1:8787/workflows#token=…`.
+  Demo mode needs no Kiro account and shows the crew cards, approvals and the live activity feed.
+- **With Minecraft:** follow the Quick start below; `--demo` works there too.
+
 ## Install with Kiro (easiest)
 
 Let your agent do it. Either:
@@ -66,15 +74,21 @@ You need: Minecraft Java **26.3** with **Fabric Loader** and **Fabric API**, Nod
 [Kiro CLI](https://kiro.dev/downloads) (or nothing, in demo mode). Google Chrome is needed for the big-screen
 browser.
 
-1. **Install the mod.** `npx -p haunted-crew haunted-crew-minecraft` installs Fabric Loader, Fabric API and
-   the mod into Minecraft 26.3 (or put `hauntedcrew-<version>.jar` in your `mods` folder yourself).
+1. **Get the code and build the mod** (the npm package is not published yet, so install from this repo;
+   building the mod needs JDK 25):
+   ```bash
+   git clone https://github.com/YUST777/haunted-crew && cd haunted-crew
+   (cd bridge && npm install)
+   (cd mod && ./gradlew build)          # writes mod/build/libs/hauntedcrew-<version>.jar
+   node bridge/bin/install-minecraft.mjs   # installs Fabric Loader, Fabric API and the mod into Minecraft 26.3
+   ```
 2. **Start the crew** in the folder of the project your agents should work on:
    ```bash
-   npx haunted-crew                   # once published to npm
-   node bridge/bin/haunted-crew.mjs   # from this repo, today
+   node /path/to/haunted-crew/bridge/bin/haunted-crew.mjs          # real Kiro agents
+   node /path/to/haunted-crew/bridge/bin/haunted-crew.mjs --demo   # no Kiro account: pretend agents
    ```
    It installs the Kiro hooks into the project, checks your Kiro sign-in, starts the bridge and
-   prints a pairing code. Add `--demo` to try everything with a pretend agent and no Kiro account.
+   prints a pairing code.
 3. **Open Minecraft** → Singleplayer → Create New World → World Type **Haunted Office**.
 4. **Press K.** On the same PC the console connects by itself. Sign in to Kiro from the console if
    it asks (Kiro's own sign-in page, we never see your password), pick a job, and give your ghost a task.
