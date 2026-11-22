@@ -227,7 +227,7 @@ thread, and skips decoding while nobody is looking at a screen.
 
 ## Status and limits
 
-- Tested against Kiro CLI's ACP protocol with a scripted agent plus a demo agent; the bridge has a
+- Run end to end with real Kiro CLI agents (ACP) for the demo video; the automated tests use a scripted agent plus a demo agent; the bridge has a
   150+ test suite including real-git and real-Chrome paths. Behaviour with a heavily rate-limited Kiro account
   depends on Kiro's own throttling.
 - Context is measured from visible text (about 4 characters per token), so it is a lower bound.

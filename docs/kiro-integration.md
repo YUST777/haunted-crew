@@ -448,13 +448,14 @@ Checked in this repository:
 
 - Every command, flag, JSON field, hook trigger and endpoint named above appears in the source files cited.
 - The generated profile and hook file are produced by the launcher and `install-hooks.mjs` exactly as described.
+- Real `kiro-cli acp` sessions end to end (2026-11-21): console ghosts driven by a signed-in Kiro CLI, recorded for the demo video. A Planner ghost took a task, summoned teammates and worked toward it. The automated suite still uses a scripted agent (`bridge/test/fake-acp.mjs`) and the demo agent (`bridge/bin/demo-agent.mjs`), so it runs without a Kiro account.
+- Kiro IDE runs this repo's hooks: the `UserPromptSubmit` hook from `.kiro/hooks/haunted-crew-user-prompt-submit.json` shows as "Run Command Hook – Haunted Crew: UserPromptSubmit" when a prompt is sent.
 - The repository has a `.kiro/` folder at its root with `specs/`, `steering/` and `hooks/`, and it is not gitignored (`git check-ignore` reports nothing for it).
 
 Not verified here, and marked as such:
 
-- That Kiro emits the trigger names used in the hook file (`PreTaskExec`, `PostFileCreate` and the others) with these exact names and payload fields. The aliases in `normalize.mjs` were written to cover the spellings Kiro's documentation was read with on 2026-11-04 (see `PLAN.md`).
+- That Kiro emits every other trigger name used in the hook files (`PreTaskExec`, `PostFileCreate` and the others) with these exact names, and the exact payload fields of each event. The aliases in `normalize.mjs` were written to cover the spellings Kiro's documentation was read with on 2026-11-04 (see `PLAN.md`).
 - That Kiro reads `plugin.json` as a Power manifest and loads `skills/haunted-crew-setup/SKILL.md` automatically.
 - What Kiro does with the profile fields `includeMcpJson`, `resources` (including the missing `AGENTS.md`) and `allowedTools`.
 - The exact output of `kiro-cli whoami`, `login` and `chat --no-interactive /usage`. The parsers in `kiro.mjs` follow the format documented in the code comments; a different output format would show as "could not read usage" or as signed out.
-- Real `kiro-cli acp` sessions end to end. `PLAN.md` (status dated 2026-11-04) lists this as still to verify; the test suite uses a scripted agent (`bridge/test/fake-acp.mjs`) and the demo agent (`bridge/bin/demo-agent.mjs`).
 - The context-window figure (1M for Claude models) in the README. The code has a `ceil(length / 4)` token estimate in `bridge/src/compaction.mjs`; the README says context is a lower bound.
