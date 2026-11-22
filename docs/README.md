@@ -3,6 +3,24 @@
 Haunted Crew turns Kiro agents into ghosts in Minecraft. A small Node **bridge** talks to Kiro, a Fabric **mod**
 draws the ghosts and the console, and everything the agents do shows up in the world.
 
+## Built with Kiro (Kiroween 2026, Frankenstein)
+
+Kiro built this project, and the ghosts are Kiro agents. Everything Kiro used is in the repo's
+[`.kiro/` folder](https://github.com/YUST777/haunted-crew/tree/main/.kiro):
+
+| Kiro feature | How it is used here |
+|---|---|
+| Specs (6) | Requirements, design and task lists for the hook event bridge, reviewed merges and the demo video (trailer, explainer clips, edit). Kiro worked through the tasks. |
+| Hooks (18) | Ten forward every Kiro event to the ghosts in Minecraft. The others run the bridge tests on save, typecheck the site, keep the docs true to the code and block risky shell commands. |
+| Steering (11) | Product, tech, structure, mod, bridge, site, Blender assets, privacy, writing style and video rules, loaded into every Kiro session. |
+| Agents (ACP) | Every ghost is a real `kiro-cli` agent over the Agent Client Protocol, with its own generated agent profile. |
+| MCP | A crew MCP server gives ghosts messages, memory, a shared database and history; Blender was driven through MCP for the models. |
+| Powers | `plugin.json` and the `haunted-crew-setup` skill let Kiro install the whole project from one prompt. |
+
+The full write-up is [Kiro integration](kiro-integration.md).
+
+## Pages
+
 | Page | What it covers |
 |---|---|
 | [Kiro integration](kiro-integration.md) | Exactly how and where Kiro is used: ACP, hooks, agent profile, MCP, skills, credits, plugin. |
