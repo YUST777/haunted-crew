@@ -26,3 +26,6 @@ output/
 .env
 .claude/
 __pycache__/
+
+# HyperFrames local history
+.hyperframes/

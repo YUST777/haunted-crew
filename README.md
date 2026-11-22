@@ -237,4 +237,19 @@ cd bridge && npm install && npm test
 cd mod && JAVA_HOME=/path/to/jdk-25 ./gradlew build     # runClient / runServer for dev
 ```
 
-Minecraft is not included; players need their own copy. Not affiliated with Mojang, Microsoft or Amazon.
+## Built with Kiro (Kiroween 2026)
+
+Category: **Frankenstein**. Everything Kiro used to build this project is in [`.kiro/`](.kiro/README.md):
+
+- **Specs** (`.kiro/specs/`): hook event bridge, reviewed merges, the Steve chase section, and the demo video
+  (20 s Blender trailer, HyperFrames explainer clips, ffmpeg edit).
+- **Steering** (`.kiro/steering/`): product, tech, structure, bridge, mod, site, Blender assets, writing style,
+  privacy, video style and render rules.
+- **Hooks** (`.kiro/hooks/`): Haunted Crew event hooks for every Kiro event, plus test, typecheck, docs and
+  shell-guard hooks and checks for the video code.
+- The full write-up is [docs/kiro-integration.md](docs/kiro-integration.md). The demo video sources are in
+  [`video/`](video/).
+
+## License
+
+[MIT](LICENSE). Minecraft is not included; players need their own copy. Not affiliated with Mojang, Microsoft or Amazon.
