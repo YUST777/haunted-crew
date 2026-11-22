@@ -5,12 +5,12 @@ draws the ghosts and the console, and everything the agents do shows up in the w
 
 ## Built with Kiro (Kiroween 2026, Frankenstein)
 
-Kiro built this project, and the ghosts are Kiro agents. Everything Kiro used is in the repo's
-[`.kiro/` folder](https://github.com/YUST777/haunted-crew/tree/main/.kiro):
+The product runs on Kiro: every ghost is a real `kiro-cli` agent, tested end to end with real Kiro. The Kiro setup
+for this repo is in the [`.kiro/` folder](https://github.com/YUST777/haunted-crew/tree/main/.kiro):
 
 | Kiro feature | How it is used here |
 |---|---|
-| Specs (6) | Requirements, design and task lists for the hook event bridge, reviewed merges and the demo video (trailer, explainer clips, edit). Kiro worked through the tasks. |
+| Specs (6) | Requirements, design and task lists for the hook event bridge, reviewed merges and the demo video (trailer, explainer clips, edit). |
 | Hooks (18) | Ten forward every Kiro event to the ghosts in Minecraft. The others run the bridge tests on save, typecheck the site, keep the docs true to the code and block risky shell commands. |
 | Steering (11) | Product, tech, structure, mod, bridge, site, Blender assets, privacy, writing style and video rules, loaded into every Kiro session. |
 | Agents (ACP) | Every ghost is a real `kiro-cli` agent over the Agent Client Protocol, with its own generated agent profile. |

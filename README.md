@@ -253,7 +253,13 @@ cd mod && JAVA_HOME=/path/to/jdk-25 ./gradlew build     # runClient / runServer 
 
 ## Built with Kiro (Kiroween 2026)
 
-Category: **Frankenstein**. Everything Kiro used to build this project is in [`.kiro/`](.kiro/README.md):
+Category: **Frankenstein**.
+
+**The product runs on Kiro.** Every ghost is a real `kiro-cli` agent over the Agent Client Protocol (ACP), and it
+was run end to end with real Kiro agents for the demo video. Kiro hooks bring Kiro IDE work into the office, and a
+Kiro Power plus a setup skill install everything from one prompt.
+
+The Kiro setup for this repo is in [`.kiro/`](.kiro/README.md):
 
 - **Specs** (`.kiro/specs/`): hook event bridge, reviewed merges, the Steve chase section, and the demo video
   (20 s Blender trailer, HyperFrames explainer clips, ffmpeg edit).
