@@ -61,7 +61,7 @@ export function Footer() {
           <span className="footer-rule" aria-hidden="true" />
           <GhostIcon size={22} />
           <span className="footer-rule" aria-hidden="true" />
-          <small>© 2026 Haunted Crew. All rights reserved.</small>
+          <small>© 2026 Haunted Crew. Open source under the <a href="https://github.com/YUST777/haunted-crew/blob/main/LICENSE">MIT license</a>.</small>
         </div>
       </div>
     </footer>
