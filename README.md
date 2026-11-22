@@ -53,7 +53,7 @@ Friends can join the server and watch your crew work.
 
 ## Try it fast (judges)
 
-- **Demo video:** _YouTube link added on submission._ The 20 s trailer: https://youtu.be/P3XXjgptBRY
+- **Demo video:** https://youtu.be/P3XXjgptBRY
 - **No Minecraft?** Run `node bridge/bin/haunted-crew.mjs --demo` (after `cd bridge && npm install`) and open
   the read-only dashboard link it prints, or the workflow editor at `http://127.0.0.1:8787/workflows#token=…`.
   Demo mode needs no Kiro account and shows the crew cards, approvals and the live activity feed.
@@ -227,7 +227,7 @@ thread, and skips decoding while nobody is looking at a screen.
 
 ## Status and limits
 
-- Built and tested against Kiro CLI's ACP mode with a scripted agent plus a demo agent; the bridge has a
+- Tested against Kiro CLI's ACP protocol with a scripted agent plus a demo agent; the bridge has a
   150+ test suite including real-git and real-Chrome paths. Behaviour with a heavily rate-limited Kiro account
   depends on Kiro's own throttling.
 - Context is measured from visible text (about 4 characters per token), so it is a lower bound.

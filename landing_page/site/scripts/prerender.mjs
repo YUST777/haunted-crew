@@ -24,7 +24,10 @@ try {
     if (words < 100) throw new Error(`prerender ${route}: only ${words} words, page did not render`);
     const dir = join(dist, route);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'index.html'), `<!doctype html>\n${html.replace(/^<!doctype html>/i, '')}`);
+    // Chrome writes injected <link modulepreload> tags with the preview origin; make them site-relative.
+    const out = html.replace(/^<!doctype html>/i, '').replaceAll(`http://localhost:${PORT}/`, '/');
+    if (out.includes(`localhost:${PORT}`)) throw new Error(`prerender ${route}: localhost URL left in the HTML`);
+    writeFileSync(join(dir, 'index.html'), `<!doctype html>\n${out}`);
     console.log(`prerender ${route}: ${words} words`);
   }
 } finally {

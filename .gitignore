@@ -29,3 +29,6 @@ __pycache__/
 
 # HyperFrames local history
 .hyperframes/
+
+# Minecraft font is Mojang's: not redistributed. Put your own copy at video/clips/*/assets/fonts/Minecraft.ttf
+video/clips/*/assets/fonts/Minecraft.ttf

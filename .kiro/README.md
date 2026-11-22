@@ -6,9 +6,9 @@ Haunted Crew writes into a user's project (the launcher creates `<project>/.kiro
 
 ```text
 .kiro/
-  specs/      requirements, design and tasks for three features
-  steering/   nine rules files that shape every Kiro session in this repo
-  hooks/      fifteen hooks: ten forward events to the bridge, five protect and check the work
+  specs/      requirements, design and tasks for six features (three for the app, three for the demo video)
+  steering/   eleven rules files that shape every Kiro session in this repo
+  hooks/      eighteen hooks: ten forward events to the bridge, eight protect and check the work
 ```
 
 ## Specs
