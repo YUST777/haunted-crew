@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Demo edit scripts check on save",
+      "trigger": "PostFileSave",
+      "description": "Compiles talk.py and compose.py when either is saved.",
+      "matcher": "video/edit/[^/]+\\.py$",
+      "action": { "type": "command", "command": "tools/kiro/video-check.sh edit", "timeout": 60 }
+    }
+  ]
+}

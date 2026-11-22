@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Trailer scripts check on save",
+      "trigger": "PostFileSave",
+      "description": "Compiles every trailer Blender script when one is saved, so a broken script never reaches the Colab render.",
+      "matcher": "video/trailer/[^/]+\\.py$",
+      "action": { "type": "command", "command": "tools/kiro/video-check.sh trailer", "timeout": 60 }
+    }
+  ]
+}

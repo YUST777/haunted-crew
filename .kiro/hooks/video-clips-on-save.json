@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "HyperFrames clips check on save",
+      "trigger": "PostFileSave",
+      "description": "Runs hyperframes check and lint on both explainer clips when a clip file is saved.",
+      "matcher": "video/clips/.+\\.(html|js|css)$",
+      "action": { "type": "command", "command": "tools/kiro/video-check.sh clips", "timeout": 180 }
+    }
+  ]
+}

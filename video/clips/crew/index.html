@@ -1,0 +1,148 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+<style>
+@font-face{font-family:'PS2';src:url('assets/fonts/press-start-2p.ttf')}
+body{margin:0;background:#0e0e0f}
+#root{position:absolute;inset:0;overflow:hidden;font-family:'Inter';color:#d9d9db;background:#0e0e0f}
+#bg{position:absolute;inset:0;width:1920px;height:1080px;opacity:.35}
+#win{position:absolute;left:60px;top:60px;width:1800px;height:960px;background:#141415;border:1px solid #2a2a2d;border-radius:24px;box-shadow:0 40px 100px rgba(0,0,0,.7);overflow:hidden}
+#bar{position:absolute;left:0;top:0;width:1800px;height:44px;background:#19191a;border-bottom:1px solid #2a2a2d}
+#bar::before{content:'';position:absolute;left:20px;top:16px;width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840}
+#bar .t{position:absolute;left:0;width:1800px;top:12px;text-align:center;font-size:17px;font-weight:600;color:#9a9aa0}
+#side{position:absolute;left:0;top:45px;width:480px;height:915px;background:#171718;border-right:1px solid #2a2a2d}
+#side > div:first-child{font-family:'Inter' !important;font-size:16px !important;color:#8c8c92 !important;font-weight:600}
+.gh{position:absolute;left:18px;width:444px;height:58px}
+.gh img{position:absolute;left:0;top:2px;width:50px;height:50px;object-fit:contain;background:#232325;border-radius:50%}
+.gh .n{position:absolute;left:64px;top:4px;font-size:21px;font-weight:600;color:#fff}
+.st{position:absolute;left:64px;top:31px;font-size:16px}
+.idle{color:#6b6b70}.work{color:#e7b84a;opacity:0}.done{color:#6fd38a;opacity:0}
+.log{position:absolute;left:18px;width:424px;font-size:18px;line-height:24px;padding:10px 14px;background:#222224;border-radius:14px;opacity:0;color:#dcdcde}
+.log b{font-family:Inter;font-size:14px;font-weight:700;margin-right:6px}
+#frame{position:absolute;left:500px;top:60px;width:1280px;height:880px;background:#0b0b0c;border:1px solid #2a2a2d;border-radius:16px;overflow:hidden}
+#url{position:absolute;left:0;top:0;width:1280px;height:44px;background:#19191a;border-bottom:1px solid #2a2a2d}
+#url::before{content:'Preview';position:absolute;left:18px;top:12px;font-size:16px;font-weight:600;color:#fff}
+#url span{position:absolute;left:110px;top:8px;width:420px;height:28px;border-radius:8px;background:#232325;font-size:16px;line-height:28px;text-indent:12px;color:#9a9aa0}
+#page{position:absolute;left:0;top:44px;width:1280px;height:836px}
+.wf{position:absolute;border:2px dashed #a77bff;border-radius:12px;transform-origin:0 0;background:rgba(167,123,255,.05)}
+#hero{position:absolute;left:20px;top:20px;width:1240px;height:420px;border-radius:14px;overflow:hidden}
+#hero img.bgi{width:1240px;height:420px;object-fit:cover}
+#t1{position:absolute;left:370px;top:110px}#t2{position:absolute;left:320px;top:190px}
+#tag{position:absolute;left:0;top:285px;width:1240px;text-align:center;font-size:28px;font-weight:600;color:#fff;text-shadow:0 2px 8px #000}
+.crew{position:absolute;top:478px;width:150px;height:150px;object-fit:contain}
+.cname{position:absolute;top:630px;width:150px;text-align:center;font-size:18px;color:#b9b9bf}
+#cta{position:absolute;left:440px;top:712px;width:400px;height:70px;background:#2fd06a;border-radius:14px;font-family:'PS2';font-size:17px;color:#08140c;text-align:center;line-height:70px}
+#ok{position:absolute;left:440px;top:712px;width:400px;height:70px;background:#7CFF9B;border-radius:14px;font-family:'PS2';font-size:17px;color:#08140c;text-align:center;line-height:70px;opacity:0}
+#sel{position:absolute;left:510px;top:114px;width:1260px;height:816px;border:2px solid #ff8de0;border-radius:16px;opacity:0}
+#lgtm{position:absolute;left:1580px;top:124px;padding:6px 14px;background:#ff8de0;color:#1a0b19;font-size:16px;font-weight:700;border-radius:999px;opacity:0}
+.cur{position:absolute;left:0;top:0}
+.cur .tag{position:absolute;left:24px;top:28px;padding:5px 12px;border-radius:999px;font-family:'Inter';font-size:15px;font-weight:700;color:#111;white-space:nowrap}
+#badge{position:absolute;left:660px;top:528px;width:1080px;text-align:center;opacity:0}
+#badge span{display:inline-block;padding:18px 38px;background:#19191a;border:1px solid #3a3a3d;border-radius:20px;font-family:'Inter';font-size:28px;font-weight:700;color:#fff;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+</style></head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="12" data-width="1920" data-height="1080">
+<img id="bg" src="assets/bg.png">
+<div id="win">
+  <div id="bar"><div class="t">Haunted Crew · Kiro</div></div>
+  <div id="side">
+    <div style="position:absolute;left:20px;top:16px;font-family:PS2;font-size:15px;color:#c9a8ff">Haunted Crew team · 6 ghosts</div>
+    <div class="gh" id="g0" style="top:56px"><img src="assets/crew-planner.webp"><div class="n">Planner</div><div class="st idle">idle</div><div class="st work">working…</div><div class="st done">done</div></div>
+    <div class="gh" id="g1" style="top:122px"><img src="assets/crew-coder.webp"><div class="n">Coder</div><div class="st idle">idle</div><div class="st work">working…</div><div class="st done">done</div></div>
+    <div class="gh" id="g2" style="top:188px"><img src="assets/crew-researcher.webp"><div class="n">Researcher</div><div class="st idle">idle</div><div class="st work">working…</div><div class="st done">done</div></div>
+    <div class="gh" id="g3" style="top:254px"><img src="assets/crew-tester.webp"><div class="n">Tester</div><div class="st idle">idle</div><div class="st work">working…</div><div class="st done">done</div></div>
+    <div class="gh" id="g4" style="top:320px"><img src="assets/crew-reviewer.webp"><div class="n">Reviewer</div><div class="st idle">idle</div><div class="st work">working…</div><div class="st done">done</div></div>
+    <div class="gh" id="g5" style="top:386px"><img src="assets/crew-docs.webp"><div class="n">Docs</div><div class="st idle">idle</div><div class="st work">working…</div><div class="st done">done</div></div>
+    <div class="log" id="l0" style="top:470px"><b style="color:#fff">YOU</b> @crew build the Haunted Crew landing page</div>
+    <div class="log" id="l1" style="top:550px"><b style="color:#a77bff">PLANNER</b> wireframing 3 sections</div>
+    <div class="log" id="l2" style="top:604px"><b style="color:#ffc63d">CODER</b> hero + title in</div>
+    <div class="log" id="l3" style="top:658px"><b style="color:#3dd6c6">RESEARCHER</b> crew portraits added</div>
+    <div class="log" id="l4" style="top:712px"><b style="color:#ff5d6c">TESTER</b> copy button works</div>
+    <div class="log" id="l5" style="top:766px"><b style="color:#ff8de0">REVIEWER</b> looks good, ship it</div>
+    <div class="log" id="l6" style="top:820px"><b style="color:#7CFF9B">DOCS</b> live at haunted-crew.pages.dev</div>
+  </div>
+  <div id="frame">
+    <div id="url"><span>haunted-crew.pages.dev</span></div>
+    <div id="page">
+      <div class="wf" id="w0" style="left:20px;top:20px;width:1240px;height:420px"></div>
+      <div class="wf" id="w1" style="left:20px;top:470px;width:1240px;height:200px"></div>
+      <div class="wf" id="w2" style="left:440px;top:712px;width:400px;height:70px"></div>
+      <div id="hero"><img class="bgi" src="assets/office-bg-1600.webp"><img id="t1" src="assets/hero-title-line1.webp"><img id="t2" src="assets/hero-title-line2.webp"><div id="tag">Your agents, haunting Minecraft.</div></div>
+      <img class="crew" id="c0" src="assets/crew-planner.webp" style="left:90px"><div class="cname" id="n0" style="left:90px">Planner</div>
+      <img class="crew" id="c1" src="assets/crew-coder.webp" style="left:280px"><div class="cname" id="n1" style="left:280px">Coder</div>
+      <img class="crew" id="c2" src="assets/crew-tester.webp" style="left:470px"><div class="cname" id="n2" style="left:470px">Tester</div>
+      <img class="crew" id="c3" src="assets/crew-reviewer.webp" style="left:660px"><div class="cname" id="n3" style="left:660px">Reviewer</div>
+      <img class="crew" id="c4" src="assets/crew-docs.webp" style="left:850px"><div class="cname" id="n4" style="left:850px">Docs</div>
+      <img class="crew" id="c5" src="assets/crew-researcher.webp" style="left:1040px"><div class="cname" id="n5" style="left:1040px">Researcher</div>
+      <div id="cta">COPY THIS TO YOUR KIRO</div><div id="ok">COPIED! PASTE IN KIRO</div>
+    </div>
+  </div>
+  <div id="sel"></div><div id="lgtm">LGTM</div>
+  <div class="cur" id="cp" data-layout-allow-occlusion data-layout-allow-overflow data-layout-ignore><svg width="30" height="38" viewBox="0 0 17 22"><path d="M1 1v17l4.5-4.2 3 6.5 3-1.4-3-6.3h6z" stroke-linejoin="round" fill="#a77bff" stroke="#000" stroke-width="1.3"/></svg><div class="tag" style="background:#a77bff">Planner</div></div>
+  <div class="cur" id="cc" data-layout-allow-occlusion data-layout-allow-overflow data-layout-ignore><svg width="30" height="38" viewBox="0 0 17 22"><path d="M1 1v17l4.5-4.2 3 6.5 3-1.4-3-6.3h6z" stroke-linejoin="round" fill="#ffc63d" stroke="#000" stroke-width="1.3"/></svg><div class="tag" style="background:#ffc63d">Coder</div></div>
+  <div class="cur" id="cr" data-layout-allow-occlusion data-layout-allow-overflow data-layout-ignore><svg width="30" height="38" viewBox="0 0 17 22"><path d="M1 1v17l4.5-4.2 3 6.5 3-1.4-3-6.3h6z" stroke-linejoin="round" fill="#3dd6c6" stroke="#000" stroke-width="1.3"/></svg><div class="tag" style="background:#3dd6c6">Researcher</div></div>
+  <div class="cur" id="ct" data-layout-allow-occlusion data-layout-allow-overflow data-layout-ignore><svg width="30" height="38" viewBox="0 0 17 22"><path d="M1 1v17l4.5-4.2 3 6.5 3-1.4-3-6.3h6z" stroke-linejoin="round" fill="#ff5d6c" stroke="#000" stroke-width="1.3"/></svg><div class="tag" style="background:#ff5d6c">Tester</div></div>
+  <div class="cur" id="cv" data-layout-allow-occlusion data-layout-allow-overflow data-layout-ignore><svg width="30" height="38" viewBox="0 0 17 22"><path d="M1 1v17l4.5-4.2 3 6.5 3-1.4-3-6.3h6z" stroke-linejoin="round" fill="#ff8de0" stroke="#000" stroke-width="1.3"/></svg><div class="tag" style="background:#ff8de0">Reviewer</div></div>
+</div>
+<div id="badge"><span>1 prompt · 6 ghosts · built in <span style="padding:0;border:0;background:none;box-shadow:none;color:#7CFF9B;font-size:28px">KIRO</span></span></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+const P = (x, y) => ({ x: 500 + x, y: 104 + y });   // page coords -> window coords
+const st = (g, s, t) => { // ghost status: idle -> working -> done
+  if (s === 'work') { tl.to(`#${g} .idle`, { opacity: 0, duration: .15 }, t); tl.to(`#${g} .work`, { opacity: 1, duration: .15 }, t); }
+  else { tl.to(`#${g} .work`, { opacity: 0, duration: .15 }, t); tl.to(`#${g} .done`, { opacity: 1, duration: .15 }, t); }
+};
+const log = (i, t) => tl.fromTo(`#l${i}`, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: .3, ease: 'expo.out' }, t);
+gsap.set(['#w0', '#w1', '#w2'], { scale: 0 }); gsap.set('#hero', { clipPath: 'inset(0 100% 0 0)' });
+gsap.set(['#t1', '#t2', '#tag', '.crew', '.cname', '#cta'], { opacity: 0 });
+gsap.set('#cp', { x: 1900, y: 300, opacity: 0 }); gsap.set('#cc', { x: 1900, y: 500, opacity: 0 }); gsap.set('#cr', { x: 1900, y: 700, opacity: 0 });
+gsap.set('#ct', { x: 1900, y: 860, opacity: 0 }); gsap.set('#cv', { x: 1900, y: 150, opacity: 0 });
+tl.fromTo('#win', { scale: .96, opacity: 0 }, { scale: 1, opacity: 1, duration: .6, ease: 'expo.out' }, 0);
+log(0, .5);
+// Planner: three wireframes, the cursor drags each box open
+st('g0', 'work', .9); log(1, 1.0);
+tl.to('#cp', { opacity: 1, duration: .2 }, .9); tl.to('#cp', { ...P(20, 20), duration: .45, ease: 'power3.out' }, .9);
+tl.to('#cp', { ...P(1260, 440), duration: .55, ease: 'power2.inOut' }, 1.4); tl.to('#w0', { scale: 1, duration: .55, ease: 'power2.inOut' }, 1.4);
+tl.to('#cp', { ...P(20, 470), duration: .3, ease: 'power2.inOut' }, 2.0);
+tl.to('#cp', { ...P(1260, 670), duration: .4, ease: 'power2.inOut' }, 2.3); tl.to('#w1', { scale: 1, duration: .4, ease: 'power2.inOut' }, 2.3);
+tl.to('#cp', { ...P(440, 712), duration: .25, ease: 'power2.inOut' }, 2.75);
+tl.to('#cp', { ...P(840, 782), duration: .3, ease: 'power2.inOut' }, 3.0); tl.to('#w2', { scale: 1, duration: .3, ease: 'power2.inOut' }, 3.0);
+st('g0', 'done', 3.3); tl.to('#cp', { x: 1700, y: 60, duration: .6, opacity: 0, ease: 'power2.in' }, 3.35);
+// Coder: hero art wipes in under the cursor, then the title
+st('g1', 'work', 3.0); log(2, 3.1);
+tl.to('#cc', { opacity: 1, duration: .2 }, 3.0); tl.to('#cc', { ...P(20, 430), duration: .45, ease: 'power3.out' }, 3.0);
+tl.to('#cc', { ...P(1260, 430), duration: .9, ease: 'power2.inOut' }, 3.5); tl.to('#hero', { clipPath: 'inset(0 0% 0 0)', duration: .9, ease: 'power2.inOut' }, 3.5);
+tl.to('#w0', { opacity: 0, duration: .3 }, 4.2);
+tl.to('#cc', { ...P(640, 140), duration: .35, ease: 'power2.inOut' }, 4.45);
+tl.fromTo('#t1', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .35, ease: 'back.out(1.6)' }, 4.6);
+tl.fromTo('#t2', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .35, ease: 'back.out(1.6)' }, 4.8);
+tl.fromTo('#tag', { opacity: 0 }, { opacity: 1, duration: .3 }, 5.0);
+st('g1', 'done', 5.2); tl.to('#cc', { x: 1700, y: 900, duration: .6, opacity: 0, ease: 'power2.in' }, 5.25);
+// Researcher: drops the crew portraits one by one
+st('g2', 'work', 4.9); log(3, 5.0); tl.to('#cr', { opacity: 1, duration: .2 }, 4.9); tl.to('#w1', { opacity: 0, duration: .3 }, 5.3);
+for (let i = 0; i < 6; i++) {
+  const t = 5.0 + i * .28; tl.to('#cr', { ...P(165 + i * 190, 560), duration: .24, ease: 'power2.inOut' }, t);
+  tl.fromTo(`#c${i}`, { opacity: 0, y: -40, scale: .6 }, { opacity: 1, y: 0, scale: 1, duration: .3, ease: 'back.out(1.8)' }, t + .2);
+  tl.fromTo(`#n${i}`, { opacity: 0 }, { opacity: 1, duration: .2 }, t + .3);
+}
+st('g2', 'done', 6.8); tl.to('#cr', { x: 1700, y: 400, duration: .5, opacity: 0, ease: 'power2.in' }, 6.85);
+// Tester: button appears, gets clicked
+st('g3', 'work', 6.5); log(4, 6.6); tl.to('#ct', { opacity: 1, duration: .2 }, 6.5);
+tl.to('#ct', { ...P(640, 750), duration: .5, ease: 'power3.out' }, 6.5); tl.to('#w2', { opacity: 0, duration: .2 }, 6.8);
+tl.fromTo('#cta', { opacity: 0, scale: .8 }, { opacity: 1, scale: 1, duration: .3, ease: 'back.out(1.8)' }, 6.85);
+tl.to('#ct', { scale: .85, duration: .08 }, 7.4); tl.to('#ct', { scale: 1, duration: .1 }, 7.48);
+tl.to('#cta', { opacity: 0, duration: .1 }, 7.45); tl.to('#ok', { opacity: 1, duration: .1 }, 7.45);
+st('g3', 'done', 7.6); tl.to('#ct', { x: 1700, y: 800, duration: .5, opacity: 0, ease: 'power2.in' }, 7.7);
+// Reviewer: selects the page, LGTM
+st('g4', 'work', 7.7); log(5, 7.9); tl.to('#cv', { opacity: 1, duration: .2 }, 7.7);
+tl.to('#cv', { x: 510, y: 114, duration: .4, ease: 'power3.out' }, 7.7);
+tl.fromTo('#sel', { opacity: 0, scale: .2, transformOrigin: '0 0' }, { opacity: 1, scale: 1, duration: .5, ease: 'power2.inOut' }, 8.1);
+tl.to('#cv', { x: 1770, y: 930, duration: .5, ease: 'power2.inOut' }, 8.1);
+tl.fromTo('#lgtm', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .25, ease: 'back.out(2)' }, 8.6);
+st('g4', 'done', 8.8); st('g5', 'work', 8.8); log(6, 9.1); st('g5', 'done', 9.6);
+tl.to(['#sel', '#lgtm'], { opacity: 0, duration: .3 }, 9.5); tl.to('#cv', { opacity: 0, duration: .3 }, 9.5);
+tl.fromTo('#badge', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .5, ease: 'expo.out' }, 9.8);
+window.__timelines["main"] = tl;
+</script>
+</body></html>

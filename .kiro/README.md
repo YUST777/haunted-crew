@@ -67,3 +67,9 @@ task shows on the big screen's task wall (`PreTaskExec`, `PostTaskExec`).
 They do not prove who wrote the code. Kiro session history is a separate record; see the repository README for how
 the project was built. They also do not mean Kiro emits exactly these trigger names: that is listed as not verified in
 `docs/kiro-integration.md` until real payloads are captured (spec task 8 in `hook-event-bridge`).
+
+## Video
+- Specs: `specs/trailer-20s`, `specs/explainer-clips`, `specs/demo-edit`
+- Steering: `steering/video-style.md`, `steering/video-render.md`
+- Hooks: `hooks/video-trailer-on-save.json`, `hooks/video-clips-on-save.json`, `hooks/video-edit-on-save.json`
+- Code: `video/trailer` (Blender), `video/clips` (HyperFrames), `video/edit` (ffmpeg)
