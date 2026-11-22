@@ -79,6 +79,12 @@ public class ConsoleScreen extends Screen {
 
 	private record Hit(int x0, int y0, int x1, int y1, Runnable action) {}
 
+	/** Right-click menu on a ghost in the sidebar: which ghost, where, and the clickable ghost rows of this frame. */
+	private record Row(int x0, int y0, int x1, int y1, String id) {}
+	private final List<Row> rows = new ArrayList<>();
+	private String menuId;
+	private int menuX, menuY, menuW, menuH;
+
 	@FunctionalInterface
 	private interface Painter {
 		void draw(GuiGraphicsExtractor g, int left, int y, int right);
@@ -103,6 +109,9 @@ public class ConsoleScreen extends Screen {
 	private int mouseX, mouseY;
 	private int ticks;
 	private String pendingSelect; // name of a ghost we just summoned
+	private int sendPendingAt;
+	private String pendingSession;
+	private String pendingMessage; // what to tell it once it has joined (from "@Coder fix the tests")
 	private int seenVersion;
 	private int sideScroll; // ghosts scrolled past in the sidebar
 	// Kiro models for new ghosts: id, label. Cheap and fast first.
@@ -199,6 +208,12 @@ public class ConsoleScreen extends Screen {
 					String[] parts = rest.split("\\s+", 2);
 					if (target == null) target = byName(parts[0]);
 					else parts = new String[] {rest.substring(0, target.label().length()), rest.substring(target.label().length()).strip()};
+					String job = target == null ? jobName(parts[0]) : null;
+					if (job != null && parts.length > 1 && !parts[1].isEmpty()) { // "@Coder fix it": summon the job, then send
+						pendingMessage = parts[1];
+						summon(job);
+						return;
+					}
 					if (target == null || parts.length < 2 || parts[1].isEmpty()) {
 						toast(target == null ? "No ghost called " + parts[0] + " here. Summon one first." : "Add a message after the name.");
 						return;
@@ -258,13 +273,21 @@ public class ConsoleScreen extends Screen {
 				for (CrewProtocol.Session s : ClientConsole.sessions.values()) {
 					if (s.console() && pendingSelect.equalsIgnoreCase(s.agent())) {
 						selected = s.id();
+						pendingSession = s.id();
 						pendingSelect = null;
+						if (pendingMessage != null) sendPendingAt = ticks + 10; // the server drops actions inside 300 ms of the summon
 						scroll = 0;
 						break;
 					}
 				}
 			}
 			if (selected != null && current() == null) selected = null;
+		}
+		if (pendingMessage != null && pendingSession != null && ticks >= sendPendingAt && sendPendingAt > 0) {
+			ClientConsole.send("prompt", pendingSession, pendingMessage, null, null);
+			pendingMessage = null;
+			pendingSession = null;
+			sendPendingAt = 0;
 		}
 		// While a Kiro sign-in is open in the browser, check every 3 s whether it finished.
 		if (ClientConsole.loginCode != null && ticks % 60 == 0) ClientConsole.send("kiro_status", null, null, null, null);
@@ -289,6 +312,17 @@ public class ConsoleScreen extends Screen {
 			}
 			if (key == InputConstants.KEY_TAB || key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
 				completeMention(mentions.get(Math.min(mentionSel, mentions.size() - 1)));
+				return true;
+			}
+		}
+		List<String> bring = summonMatches();
+		if (!bring.isEmpty()) {
+			if (key == InputConstants.KEY_DOWN || key == InputConstants.KEY_UP) {
+				mentionSel = Math.floorMod(mentionSel + (key == InputConstants.KEY_DOWN ? 1 : -1), bring.size());
+				return true;
+			}
+			if (key == InputConstants.KEY_TAB || key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
+				fillSummonMention(bring.get(Math.min(mentionSel, bring.size() - 1)));
 				return true;
 			}
 		}
@@ -332,6 +366,41 @@ public class ConsoleScreen extends Screen {
 		return out;
 	}
 
+	/** No ghost matches the @: offer the jobs you can summon right here (Planner, Coder...), skipping names already in the crew. */
+	private List<String> summonMatches() {
+		int at = mentionStart();
+		if (at < 0 || !mentionMatches().isEmpty()) return List.of();
+		String text = input.getValue();
+		String frag = text.substring(at + 1, Math.min(input.getCursorPosition(), text.length())).toLowerCase(Locale.ROOT);
+		List<String> out = new ArrayList<>();
+		for (CrewProtocol.Job j : CrewProtocol.Job.WORKERS) {
+			String name = j.name().charAt(0) + j.name().substring(1).toLowerCase(Locale.ROOT);
+			if (name.toLowerCase(Locale.ROOT).startsWith(frag) && byName(name) == null) out.add(name);
+		}
+		return out;
+	}
+
+	/** Canonical job name ("Coder") for a typed name, or null; only when no ghost of that name exists yet. */
+	private String jobName(String typed) {
+		for (CrewProtocol.Job j : CrewProtocol.Job.WORKERS) {
+			String name = j.name().charAt(0) + j.name().substring(1).toLowerCase(Locale.ROOT);
+			if (name.equalsIgnoreCase(typed) && byName(name) == null) return name;
+		}
+		return null;
+	}
+
+	/** Fills "@Name " into the input for a summonable job. */
+	private void fillSummonMention(String name) {
+		int at = mentionStart();
+		if (at < 0) return;
+		String text = input.getValue();
+		int cur = Math.min(input.getCursorPosition(), text.length());
+		String insert = "@" + name + " ";
+		input.setValue(text.substring(0, at) + insert + text.substring(cur));
+		input.setCursorPosition(at + insert.length());
+		mentionSel = 0;
+	}
+
 	private void completeMention(CrewProtocol.Session s) {
 		int at = mentionStart();
 		if (at < 0) return;
@@ -345,7 +414,10 @@ public class ConsoleScreen extends Screen {
 
 	private void drawMentions(GuiGraphicsExtractor g) {
 		List<CrewProtocol.Session> all = mentionMatches();
-		if (all.isEmpty()) return;
+		if (all.isEmpty()) {
+			drawSummonMentions(g);
+			return;
+		}
 		List<CrewProtocol.Session> list = all.size() > 6 ? all.subList(0, 6) : all;
 		mentionSel = Math.min(mentionSel, list.size() - 1);
 		int rowH = 16, w = 190, x = chatX0 + PAD, h = list.size() * rowH + 6 + 12, yb = y1 - PAD - INPUT - 4, yt = yb - h;
@@ -361,6 +433,25 @@ public class ConsoleScreen extends Screen {
 			g.text(font, act, x + w - 6 - font.width(act), ry + 4, FAINT, shadow);
 			final int idx = i;
 			hits.add(new Hit(x + 2, ry, x + w - 2, ry + rowH, () -> completeMention(list.get(idx))));
+		}
+		g.text(font, "↑↓ choose · Tab to add", x + 6, yb - 12, FAINT, shadow);
+	}
+
+	private void drawSummonMentions(GuiGraphicsExtractor g) {
+		List<String> all = summonMatches();
+		if (all.isEmpty()) return;
+		mentionSel = Math.min(mentionSel, all.size() - 1);
+		int rowH = 16, w = 190, x = chatX0 + PAD, h = all.size() * rowH + 6 + 12, yb = y1 - PAD - INPUT - 4, yt = yb - h;
+		round(g, x, yt, x + w, yb, CARD);
+		for (int i = 0; i < all.size(); i++) {
+			String name = all.get(i);
+			int ry = yt + 3 + i * rowH;
+			boolean on = i == mentionSel || hover(x + 2, ry, x + w - 2, ry + rowH);
+			if (on) round(g, x + 2, ry, x + w - 2, ry + rowH, SELECT);
+			avatar(g, x + 5, ry + 2, 12, name, null);
+			g.text(font, name, x + 22, ry + 4, on ? TEXT : DIM, shadow);
+			g.text(font, "new", x + w - 6 - font.width("new"), ry + 4, PUMPKIN, shadow);
+			hits.add(new Hit(x + 2, ry, x + w - 2, ry + rowH, () -> fillSummonMention(name)));
 		}
 		g.text(font, "↑↓ choose · Tab to add", x + 6, yb - 12, FAINT, shadow);
 	}
@@ -382,6 +473,20 @@ public class ConsoleScreen extends Screen {
 	@Override
 	public boolean mouseClicked(MouseButtonEvent raw, boolean doubleClick) {
 		MouseButtonEvent event = zoomed(raw);
+		if (event.buttonInfo().button() == 1) { // right-click a ghost: its menu
+			for (Row r : rows) {
+				if (event.x() >= r.x0 && event.x() < r.x1 && event.y() >= r.y0 && event.y() < r.y1) {
+					menuId = r.id;
+					menuX = (int) event.x();
+					menuY = (int) event.y();
+					return true;
+				}
+			}
+			menuId = null; // right-click anywhere else acts like a normal click (some mice report the main button as 1)
+		} else if (menuId != null && !inRect(new int[] {menuX, menuY, menuX + menuW, menuY + menuH}, event.x(), event.y())) {
+			menuId = null; // a click outside closes the menu without doing anything else
+			return true;
+		}
 		if ((modelMenu || ctxPanel) && !inRect(panelRect, event.x(), event.y()) && !inRect(toggleRects, event.x(), event.y())) {
 			modelMenu = false;
 			ctxPanel = false;
@@ -496,8 +601,13 @@ public class ConsoleScreen extends Screen {
 		};
 	}
 
+	// The chat is rebuilt every frame; wrapping and trimming long messages each time made the screen crawl.
+	private final java.util.Map<String, List<FormattedCharSequence>> wrapCache = new java.util.HashMap<>();
+	private final java.util.Map<String, String> trimCache = new java.util.HashMap<>();
+
 	private List<FormattedCharSequence> wrap(String text, int w, int color) {
-		return font.split(Component.literal(text).withColor(color), Math.max(20, w));
+		if (wrapCache.size() > 600) wrapCache.clear();
+		return wrapCache.computeIfAbsent(w + ":" + color + ":" + text, k -> font.split(Component.literal(text).withColor(color), Math.max(20, w)));
 	}
 
 	private static void dot(GuiGraphicsExtractor g, int x, int y, int color) {
@@ -528,6 +638,7 @@ public class ConsoleScreen extends Screen {
 		mouseX = mx;
 		mouseY = my;
 		hits.clear();
+		rows.clear();
 		g.pose().pushMatrix();
 		g.pose().scale(k, k);
 		drawPanel(g);
@@ -541,6 +652,7 @@ public class ConsoleScreen extends Screen {
 		drawInputTools(g);
 		if (input.getValue().isEmpty()) g.text(font, trim(placeholder(), input.getWidth() - 8), input.getX() + 6, input.getY(), FAINT, shadow);
 		drawToast(g);
+		drawGhostMenu(g);
 		g.pose().popMatrix();
 	}
 
@@ -585,7 +697,7 @@ public class ConsoleScreen extends Screen {
 		y += ROW - 4;
 		g.text(font, "GHOSTS", x, y + 2, FAINT, shadow);
 		y += 13;
-		int bottom = y1 - 58, i = 0, shown = 0, total = ClientConsole.sessions.size();
+		int bottom = y1 - 46, i = 0, shown = 0, total = ClientConsole.sessions.size();
 		sideScroll = Math.min(sideScroll, Math.max(0, total - 1));
 		if (sideScroll > 0) {
 			g.text(font, "↑ " + sideScroll + " more (scroll)", x, y, FAINT, shadow);
@@ -648,11 +760,59 @@ public class ConsoleScreen extends Screen {
 		int tx = x + 30, tw = xe - tx - 4;
 		g.text(font, trim(title + (s != null && !s.console() ? " ·" : ""), tw), tx, y + 4, TEXT, shadow);
 		g.text(font, trim(sub, tw), tx, y + 15, (s != null && s.status() == CrewProtocol.Status.WAITING) || sub.contains("need you") ? WARN : DIM, shadow);
+		if (id != null) rows.add(new Row(x, y, xe, y + ROW - 4, id));
 		hits.add(new Hit(x, y, xe, y + ROW - 4, () -> {
 			selected = id;
 			mode = Mode.CHAT;
 			scroll = 0;
 		}));
+	}
+
+	private void drawGhostMenu(GuiGraphicsExtractor g) {
+		if (menuId == null) return;
+		CrewProtocol.Session s = ClientConsole.sessions.get(menuId);
+		if (s == null) {
+			menuId = null;
+			return;
+		}
+		boolean cmd = ClientConsole.canCommand;
+		String[] labels = {"Open chat", "Copy name", cmd ? "Stop task" : null, cmd ? "Dismiss ghost" : null};
+		int w = 0, n = 0;
+		for (String l : labels) if (l != null) { w = Math.max(w, font.width(l)); n++; }
+		menuW = w + 20;
+		menuH = n * 14 + 6;
+		int x = Math.min(menuX, x1 - menuW - 2), y = Math.min(menuY, y1 - menuH - 2);
+		menuX = x;
+		menuY = y;
+		round(g, x, y, x + menuW, y + menuH, SIDEBAR);
+		int row = y + 3;
+		final String id = menuId;
+		for (String l : labels) {
+			if (l == null) continue;
+			boolean bad = l.startsWith("Dismiss"), hot = hover(x + 2, row, x + menuW - 2, row + 14);
+			if (hot) round(g, x + 2, row, x + menuW - 2, row + 14, bad ? 0xFF8F3838 : ACCENT);
+			g.text(font, l, x + 9, row + 3, bad && !hot ? BAD : TEXT, shadow);
+			hits.add(new Hit(x + 2, row, x + menuW - 2, row + 14, () -> {
+				menuId = null;
+				switch (l) {
+					case "Open chat" -> {
+						selected = id;
+						mode = Mode.CHAT;
+						scroll = 0;
+					}
+					case "Copy name" -> {
+						Minecraft.getInstance().keyboardHandler.setClipboard(s.label());
+						toast("Copied " + s.label());
+					}
+					case "Stop task" -> ClientConsole.send("interrupt", id, null, null, null);
+					default -> {
+						ClientConsole.send("dismiss", id, null, null, null);
+						if (id.equals(selected)) selected = null;
+					}
+				}
+			}));
+			row += 14;
+		}
 	}
 
 	private void drawHeader(GuiGraphicsExtractor g) {
@@ -726,7 +886,8 @@ public class ConsoleScreen extends Screen {
 			ctxPanel = false;
 			return;
 		}
-		int by = y1 - PAD - INPUT + 4, right = x1 - PAD - 32;
+		// the wider Stop button replaces Send while a ghost works: keep the model button clear of it
+		int by = y1 - PAD - INPUT + 4, right = stopMode() ? x1 - PAD - 4 - (font.width("Stop") + 22) - 6 : x1 - PAD - 32;
 		// model button
 		String label = shortModel(s.model()) + " ▾";
 		int mw = font.width(label) + 14, mx = right - mw;
@@ -834,7 +995,7 @@ public class ConsoleScreen extends Screen {
 	private boolean suggestionsVisible() {
 		CrewProtocol.Session s = current();
 		return mode == Mode.CHAT && s != null && s.console() && ClientConsole.canCommand && s.status() == CrewProtocol.Status.IDLE
-			&& input.getValue().isEmpty() && mentionMatches().isEmpty() && !modelMenu && !ctxPanel;
+			&& input.getValue().isEmpty() && mentionMatches().isEmpty() && summonMatches().isEmpty() && !modelMenu && !ctxPanel;
 	}
 
 	private void drawSuggestions(GuiGraphicsExtractor g) {
@@ -878,10 +1039,10 @@ public class ConsoleScreen extends Screen {
 
 	private void drawToast(GuiGraphicsExtractor g) {
 		if (ClientConsole.notice == null || System.currentTimeMillis() - ClientConsole.noticeAt > 6000) return;
-		String n = trim(ClientConsole.notice, x1 - chatX0 - 40);
-		int w = font.width(n) + 16, cx = (chatX0 + x1) / 2, y = y1 - PAD - INPUT - 22; // just above the input, never over cards
-		round(g, cx - w / 2, y, cx + w / 2, y + 16, 0xF02E2346);
-		g.centeredText(font, n, cx, y + 4, WARN);
+		String n = trim(ClientConsole.notice, (x1 - chatX0) / 2);
+		int w = font.width(n) + 16, x = x1 - PAD - w, y = y0 + HEADER + 8; // top right of the chat, clear of the input, chips and menus
+		round(g, x, y, x + w, y + 16, 0xF02E2346);
+		g.text(font, n, x + 8, y + 4, WARN, shadow);
 	}
 
 	// ---------------------------------------------------------------- conversation
@@ -1081,7 +1242,7 @@ public class ConsoleScreen extends Screen {
 
 	/** Hover chips on a bubble, like the AI SDK's message actions: Copy, and Retry (resend) on your own messages. */
 	private void bubbleActions(GuiGraphicsExtractor g, int bx0, int by0, int bx1, int by1, String text, String retrySession) {
-		if (!hover(bx0, by0 - 16, bx1, by1)) return;
+		if (!hover(bx0, by0 - 20, bx1, by1)) return;
 		List<String> names = new ArrayList<>(List.of("Copy"));
 		if (retrySession != null && ClientConsole.canCommand && ClientConsole.sessions.containsKey(retrySession) && !text.endsWith("…")) names.add("Retry");
 		int x = bx1;
@@ -1089,10 +1250,10 @@ public class ConsoleScreen extends Screen {
 			String name = names.get(i);
 			int w = font.width(name) + 12;
 			x -= w + 3;
-			boolean hot = hover(x, by0 - 14, x + w, by0 + 2);
-			round(g, x, by0 - 14, x + w, by0 + 2, hot ? ACCENT_HI : CARD);
-			g.text(font, name, x + 6, by0 - 10, hot ? 0xFFFFFFFF : DIM, shadow);
-			hits.add(new Hit(x, by0 - 14, x + w, by0 + 2, () -> {
+			boolean hot = hover(x, by0 - 18, x + w, by0 - 2);
+			round(g, x, by0 - 18, x + w, by0 - 2, hot ? ACCENT_HI : CARD);
+			g.text(font, name, x + 6, by0 - 14, hot ? 0xFFFFFFFF : DIM, shadow);
+			hits.add(new Hit(x, by0 - 18, x + w, by0 - 2, () -> {
 				if (name.equals("Copy")) {
 					Minecraft.getInstance().keyboardHandler.setClipboard(text);
 					toast("Copied");
@@ -1337,6 +1498,10 @@ public class ConsoleScreen extends Screen {
 			step(g, x, sy, "1", "On the PC with your project, run:");
 			round(g, x + 18, sy + 12, x + 18 + font.width("npx haunted-crew") + 12, sy + 26, 0xFF241B38);
 			g.text(font, "npx haunted-crew", x + 24, sy + 15, PUMPKIN, shadow);
+			button(g, x + 18 + font.width("npx haunted-crew") + 18, sy + 11, "Copy prompt", ACCENT, () -> {
+				Minecraft.getInstance().keyboardHandler.setClipboard(TutorialScreen.INSTALL_PROMPT);
+				toast("Copied. Paste it into your AI tool");
+			});
 			g.text(font, trim("Same PC? That's it, this screen updates itself.", right - x - 20), x + 18, sy + 30, DIM, shadow);
 			step(g, x, sy + 50, "2", "Server on another machine?");
 			button(g, x + 18, sy + 62, "Enter pairing code", ACCENT, () -> {
@@ -1366,9 +1531,17 @@ public class ConsoleScreen extends Screen {
 
 	private String trim(String s, int maxW) {
 		if (s == null) return "";
-		if (font.width(s) <= maxW) return s;
-		while (s.length() > 1 && font.width(s + "…") > maxW) s = s.substring(0, s.length() - 1);
-		return s + "…";
+		if (trimCache.size() > 600) trimCache.clear();
+		return trimCache.computeIfAbsent(maxW + ":" + s, k -> {
+			if (font.width(s) <= maxW) return s;
+			int lo = 1, hi = s.length(); // longest prefix that still fits with the ellipsis
+			while (lo < hi) {
+				int mid = (lo + hi + 1) >>> 1;
+				if (font.width(s.substring(0, mid) + "…") <= maxW) lo = mid;
+				else hi = mid - 1;
+			}
+			return s.substring(0, lo) + "…";
+		});
 	}
 
 	private static int nameColor(String name) {

@@ -618,6 +618,8 @@ public class WorkflowScreen extends Screen {
 			return true;
 		}
 		boolean typing = getFocused() instanceof EditBox || getFocused() instanceof MultiLineEditBox;
+		if (!typing && agentEdit == null && (key == InputConstants.KEY_EQUALS || key == InputConstants.KEY_ADD)) { zoomBy(1.25); return true; }
+		if (!typing && agentEdit == null && (key == InputConstants.KEY_MINUS)) { zoomBy(0.8); return true; }
 		if (!typing && canEdit && (key == InputConstants.KEY_DELETE || key == InputConstants.KEY_BACKSPACE)) {
 			deleteSelected();
 			return true;
@@ -746,12 +748,15 @@ public class WorkflowScreen extends Screen {
 			if (y > vh - 16) break;
 			JsonObject t = el.getAsJsonObject();
 			String name = str(t, "name");
-			boolean hot = hover(x, y, x + w, y + 22);
-			fillRound(g, x, y, x + w, y + 22, hot ? 0xFF2A2140 : PANEL2);
-			List<FormattedCharSequence> rows = font.split(Component.literal(name), w - 8);
-			for (int i = 0; i < Math.min(2, rows.size()); i++) g.text(font, rows.get(i), x + 4, y + 2 + i * 9, hot ? PUMPKIN : TEXT, shadow);
-			hits.add(new Hit(x, y, x + w, y + 22, () -> load(t, true)));
-			y += 25;
+			int colon = name.indexOf(": ");
+			String title = colon > 0 ? name.substring(0, colon) : name, sub = colon > 0 ? name.substring(colon + 2) : "";
+			boolean hot = hover(x, y, x + w, y + 24);
+			fillRound(g, x, y, x + w, y + 24, hot ? 0xFF2A2140 : PANEL2);
+			g.fill(x, y + 3, x + 2, y + 21, hot ? PUMPKIN : ACCENT);
+			g.text(font, trim(title, w - 12), x + 7, y + 3, hot ? PUMPKIN : TEXT, shadow);
+			if (!sub.isEmpty()) g.text(font, trim(sub, w - 12), x + 7, y + 13, FAINT, shadow);
+			hits.add(new Hit(x, y, x + w, y + 24, () -> load(t, true)));
+			y += 27;
 		}
 	}
 
@@ -834,7 +839,37 @@ public class WorkflowScreen extends Screen {
 		mouseX = smx;
 		mouseY = smy;
 		g.disableScissor();
-		if (!nodes.isEmpty()) g.text(font, "drag boxes · drag a right dot to a box · wheel zooms · Delete removes", LEFT + 6, vh - 11, FAINT, shadow);
+		if (!nodes.isEmpty()) g.text(font, "drag boxes · drag a right dot to a box · wheel or + - zooms · Delete removes", LEFT + 6, vh - 11, FAINT, shadow);
+		zoomControls(g, x1);
+	}
+
+	/** Zoom around the middle of the canvas. */
+	private void zoomBy(double factor) {
+		double cx = (LEFT + canvasX1()) / 2.0, cy = (TOP + vh) / 2.0, before = zoom;
+		zoom = Math.max(0.3, Math.min(1.6, zoom * factor));
+		panX = cx - LEFT - (cx - LEFT - panX) * zoom / before;
+		panY = cy - TOP - (cy - TOP - panY) * zoom / before;
+	}
+
+	/** "-  100%  +  Fit" in the canvas corner. */
+	private void zoomControls(GuiGraphicsExtractor g, int x1) {
+		int y = vh - 22, h = 16, x = x1 - 8;
+		x = zoomButton(g, x, y, h, "Fit", font.width("Fit") + 10, this::fit);
+		x = zoomButton(g, x - 3, y, h, "+", 16, () -> zoomBy(1.25));
+		int lw = font.width("100%") + 8;
+		fillRound(g, x - 3 - lw, y, x - 3, y + h, PANEL2);
+		g.centeredText(font, Math.round(zoom * 100) + "%", x - 3 - lw / 2, y + 4, DIM);
+		zoomButton(g, x - 6 - lw, y, h, "-", 16, () -> zoomBy(0.8));
+	}
+
+	/** One small button whose right edge is at `right`; returns its left edge. */
+	private int zoomButton(GuiGraphicsExtractor g, int right, int y, int h, String label, int w, Runnable action) {
+		int x = right - w;
+		boolean hot = hover(x, y, right, y + h);
+		fillRound(g, x, y, right, y + h, hot ? 0xFF2A2140 : PANEL2);
+		g.centeredText(font, label, x + w / 2, y + 4, hot ? PUMPKIN : TEXT);
+		hits.add(new Hit(x, y, right, y + h, action));
+		return x;
 	}
 
 	/** Cubic curve from an output dot to an input dot; returns its middle point. */

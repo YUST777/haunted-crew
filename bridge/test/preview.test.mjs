@@ -23,12 +23,16 @@ test('preview needs a token, then a cookie carries it', async () => {
   assert.equal((await fetch(`${base}/preview/`)).status, 401);
   const r = await fetch(`${base}/preview/?token=${tokens.view}`);
   assert.equal(r.status, 200);
-  assert.equal(await r.text(), '<h1>Cookies</h1>');
+  const html = await r.text();
+  assert.ok(html.startsWith('<h1>Cookies</h1>') && html.includes('hc_mtime'), 'html gets the live-reload script');
   const cookie = r.headers.get('set-cookie').split(';')[0];
   assert.match(r.headers.get('set-cookie'), /HttpOnly/);
   const css = await fetch(`${base}/preview/css/site.css`, { headers: { cookie } });
   assert.equal(css.status, 200);
   assert.equal(css.headers.get('content-type'), 'text/css');
+  assert.equal(await css.text(), 'h1{}', 'only html is changed');
+  const m = await fetch(`${base}/preview/?hc_mtime`, { headers: { cookie } });
+  assert.equal(typeof (await m.json()).mtime, 'number');
 });
 
 test('preview cannot escape the project folder', async () => {

@@ -35,11 +35,26 @@ final class Guide {
 	private static int ticks;
 	private static final Map<UUID, Integer> step = new HashMap<>();
 	private static final Set<UUID> greeted = new HashSet<>();
+	/** Players Boo is leading home; value false = still flying out to fetch them. */
+	private static final Map<UUID, Boolean> leading = new HashMap<>();
 
 	private Guide() {}
 
 	static boolean isGuide(Entity e) {
 		return e.entityTags().contains(TAG);
+	}
+
+	private static Vec3 inside;
+
+	static void setInside(Vec3 v) {
+		inside = v;
+	}
+
+	/** Tour finished or skipped: walk the player into the office (desk area). */
+	static void sendInside(ServerPlayer p) {
+		leading.remove(p.getUUID());
+		if (inside == null) return;
+		p.teleportTo(inside.x, inside.y + 0.1, inside.z);
 	}
 
 	static void setHome(int[] marker) {
@@ -72,50 +87,66 @@ final class Guide {
 		if (level.addFreshEntity(g)) id = g.getUUID();
 	}
 
-	/** Bob in place and turn toward the nearest player. */
+	/** First visit: Boo flies to the player, then leads them home and starts the tour there. */
+	static void lead(ServerPlayer p) {
+		leading.put(p.getUUID(), false);
+		greeted.add(p.getUUID());
+	}
+
+	/** Lead a player home, or bob in place and turn toward the nearest player. */
 	static void idle(GhostEntity g, ServerLevel level) {
 		if (home == null) return;
+		ServerPlayer lead = null;
+		for (var it = leading.keySet().iterator(); it.hasNext() && lead == null;) {
+			lead = level.getServer().getPlayerList().getPlayer(it.next());
+			if (lead == null) it.remove();
+		}
+		if (lead != null) {
+			leadStep(g, lead);
+			return;
+		}
 		g.setPos(home.x, home.y + Math.sin(g.tickCount / 12.0) * 0.12, home.z);
 		g.setDeltaMovement(Vec3.ZERO);
 		Player p = level.getNearestPlayer(g, 12);
-		if (p == null) return;
-		Vec3 d = p.position().subtract(g.position());
+		if (p != null) face(g, p.position().subtract(g.position()));
+	}
+
+	private static void leadStep(GhostEntity g, ServerPlayer p) {
+		UUID pid = p.getUUID();
+		boolean fetched = leading.get(pid);
+		Vec3 target = fetched ? home : p.position().add(0, 1.4, 0);
+		Vec3 delta = target.subtract(g.position());
+		double dist = delta.length();
+		if (!fetched) {
+			if (dist < 3) {
+				leading.put(pid, true);
+				p.sendOverlayMessage(c("👻 Follow Boo to the office!", ORANGE));
+			} else g.setPos(g.position().add(delta.scale(0.35 / dist)));
+		} else if (dist < 0.4) {
+			leading.remove(pid);
+			p.sendOverlayMessage(c("👻 You're home!", ORANGE));
+			talk(g, p);
+		} else if (p.distanceToSqr(g) > 36) {
+			p.sendOverlayMessage(c("👻 Boo is waiting. Follow me!", ORANGE));
+			face(g, p.position().subtract(g.position()));
+			return;
+		} else g.setPos(g.position().add(delta.scale(Math.min(0.2, dist) / dist)));
+		g.setDeltaMovement(Vec3.ZERO);
+		face(g, fetched ? delta : p.position().subtract(g.position()));
+	}
+
+	private static void face(GhostEntity g, Vec3 d) {
 		float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z));
 		g.setYRot(yaw);
 		g.setYHeadRot(yaw);
 		g.yBodyRot = yaw;
 	}
 
+	/** Open the tutorial widget on the player's screen. */
 	static void talk(GhostEntity g, ServerPlayer player) {
-		List<List<Component>> pages = pages();
-		int i = step.getOrDefault(player.getUUID(), 0) % pages.size();
-		step.put(player.getUUID(), i + 1);
-		player.sendSystemMessage(c("", TEXT));
-		player.sendSystemMessage(c("👻 Boo", ORANGE).copy().withStyle(ChatFormatting.BOLD)
-			.append(c("  ·  tip " + (i + 1) + " of " + pages.size(), DIM).copy().withStyle(s -> s.withBold(false))));
-		for (Component line : pages.get(i)) player.sendSystemMessage(line);
-		if (i + 1 < pages.size()) player.sendSystemMessage(c("Right-click me for the next tip.", DIM));
-		g.level().playSound(null, g.getX(), g.getY(), g.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1f, 1.2f + i * 0.05f);
-	}
-
-	private static List<List<Component>> pages() {
-		boolean connected = "connected".equals(HauntedCrew.bridgeState());
-		return List.of(
-			List.of(c("Welcome to the Haunted Office! Every ghost inside is one of your Kiro AI agents, working on your real project. Let me show you around.", TEXT)),
-			connected
-				? List.of(c("✔ Your crew is connected to Kiro. You're ready to go.", 0x4ADE80))
-				: List.of(c("First, connect your crew. On this PC, open a terminal in your project folder and run:", TEXT),
-					c("   npx haunted-crew", CMD),
-					c("Add --demo to try it without a Kiro account. The game finds it by itself.", DIM)),
-			List.of(c("Open the Agent Console: right-click the ghost item in your hotbar, or press K. Click + New ghost, pick a job (Planner, Coder, Tester…) and type a task, just like chatting with an AI.", TEXT)),
-				List.of(c("Want a whole team? In the console, open Workflows: chain ghosts with arrows (plan → code → test → review), or make your own agents from a prompt or a SKILL.md. Press Run and watch them hand work to each other.", TEXT)),
-			List.of(c("Your ghost floats to a desk and gets to work. Its name tag shows what it's doing, and the big screen inside shows the whole crew live.", TEXT)),
-			List.of(c("When a ghost glows and floats over to you, it needs your OK: it wants to edit a file or run a command. Open the console and press Allow or Reject.", TEXT)),
-			List.of(c("Hold the Screen Remote and right-click to switch the big screen: Dashboard → Live code (see every edit as it happens) → Website (your project) → Web search → Activity. Left-click the screen to use it like a browser.", TEXT)),
-			List.of(c("Friends can join your world and watch. Only you and operators give orders.", TEXT),
-				c("Server on another PC? Use /crew pair with the code the launcher prints.", DIM)),
-			List.of(c("That's the tour! Head inside, the desks are waiting.", TEXT),
-				c("Right-click me any time to hear it again.", DIM)));
+		if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(player, ConsolePayloads.ToClient.TYPE))
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new ConsolePayloads.ToClient("{\"type\":\"tutorial\"}"));
+		g.level().playSound(null, g.getX(), g.getY(), g.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1f, 1.2f);
 	}
 
 	private static MutableComponent c(String text, int color) {

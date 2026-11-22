@@ -64,6 +64,8 @@ function readBody(req) {
   });
 }
 
+const LIVE_RELOAD = '<script>(()=>{let m;setInterval(async()=>{try{const r=await fetch(location.pathname+"?hc_mtime",{cache:"no-store"});const t=(await r.json()).mtime;if(m&&t!==m)location.reload();m=t}catch{}},700)})()</script>';
+
 export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agentOptions = null, kiroOptions = {}, previewRoot = agentOptions?.cwd ?? null, browserOptions = {}, worktrees = null, ...stateOpts }) {
   if (!tokens?.ingest || !tokens?.view) throw new Error('ingest and view tokens are required');
   let boundUrl = null; // http://127.0.0.1:<port>, set when listening; agents reach their crew tools there
@@ -274,6 +276,7 @@ export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agen
         return send(res, 202, agents.prompt(parts[1], body.text));
       }
       if (req.method === 'POST' && parts.length === 3 && parts[2] === 'model') return send(res, 200, await agents.setModel(parts[1], (await readJson(req)).model));
+      if (req.method === 'POST' && parts.length === 3 && parts[2] === 'dismiss') return send(res, 200, agents.dismiss(parts[1]));
       if (req.method === 'POST' && parts.length === 3 && parts[2] === 'interrupt') return send(res, 200, agents.interrupt(parts[1]));
       if (req.method === 'POST' && parts.length === 3 && (parts[2] === 'pause' || parts[2] === 'resume')) return send(res, 200, agents.setPaused(parts[1], parts[2] === 'pause'));
       if (req.method === 'POST' && parts.length === 3 && parts[2] === 'permission') {
@@ -368,7 +371,10 @@ export function createBridge({ tokens, log = console, heartbeatMs = 30_000, agen
       if (file !== root && !file.startsWith(root + sep)) return send(res, 403, { error: 'outside the project' });
       try {
         if (statSync(file).isDirectory()) file = resolve(file, 'index.html');
-        const body = readFileSync(file);
+        if (url.searchParams.has('hc_mtime')) return send(res, 200, { mtime: statSync(file).mtimeMs }); // the live-reload poll below
+        let body = readFileSync(file);
+        // Pages shown on the big screen reload themselves when the file changes, so you watch the crew build them.
+        if (extname(file).toLowerCase() === '.html') body = Buffer.concat([body, Buffer.from(LIVE_RELOAD)]);
         const headers = { 'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' };
         if (url.searchParams.get('token')) headers['set-cookie'] = `hc_preview=${encodeURIComponent(url.searchParams.get('token'))}; Path=/preview; HttpOnly; SameSite=Strict`;
         res.writeHead(200, headers);

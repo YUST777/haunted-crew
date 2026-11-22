@@ -21,3 +21,8 @@ output/
 # local API keys
 .env.local
 .env*.local
+
+# local only: never publish
+.env
+.claude/
+__pycache__/

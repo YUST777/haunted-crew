@@ -114,8 +114,10 @@ public class GhostEntity extends PathfinderMob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (hand == InteractionHand.MAIN_HAND && Guide.isGuide(this)) {
-			if (player instanceof ServerPlayer sp) Guide.talk(this, sp);
+		// job() is synced to the client (entity tags are not), so both sides consume the click and the held item
+		// (console, screen remote) never fires when you right-click Boo.
+		if (job() == CrewProtocol.Job.GUIDE) {
+			if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp) Guide.talk(this, sp);
 			return InteractionResult.SUCCESS;
 		}
 		return super.mobInteract(player, hand);

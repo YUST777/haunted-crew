@@ -1,5 +1,6 @@
 import { Ghosts } from './Ghosts';
 import { SetupCard } from './SetupCard';
+import { TrailerPlayer } from './TrailerPlayer';
 
 export function Hero() {
   return (
@@ -19,13 +20,8 @@ export function Hero() {
         <p className="hero-tagline">Your agents, haunting Minecraft.</p>
         <p className="hero-sub">Turn your coding agents into helpful ghosts inside a haunted office.</p>
         <div className="hero-showcase">
-          <div className="showcase-slot" role="group" aria-label="Haunted Crew showcase video placeholder, 1920 by 1080">
-            <span className="showcase-resolution">1920 × 1080 · 16:9</span>
-            <span className="showcase-placeholder">
-              <i aria-hidden="true">▶</i>
-              <b>Showcase video</b>
-              <small>1920 × 1080</small>
-            </span>
+          <div className="showcase-slot">
+            <TrailerPlayer />
           </div>
           <SetupCard />
         </div>

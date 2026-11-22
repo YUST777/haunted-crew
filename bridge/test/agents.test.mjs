@@ -151,6 +151,20 @@ test('pause holds the queue, interrupt drops it and cancels the turn', async () 
   assert.equal((await call('/agents/nope/interrupt')).status, 404);
 });
 
+test('dismiss removes a ghost, ends its session and denies its open permission', async () => {
+  const { session } = await (await call('/agents', { name: 'Goner' })).json();
+  await call(`/agents/${session}/prompt`, { text: 'try it' });
+  const perm = await waitFor(() => events.find((m) => m.event.session === session && m.event.kind === 'permission'));
+  assert.deepEqual(await (await call(`/agents/${session}/dismiss`)).json(), { dismissed: true });
+  const resolved = await waitFor(() => events.find((m) => m.event.session === session && m.event.kind === 'permission_resolved'));
+  assert.ok(resolved);
+  assert.ok(perm);
+  await waitFor(() => events.find((m) => m.event.session === session && m.event.kind === 'session_end'));
+  const list = await (await call('/agents', undefined, tokens.view, 'GET')).json();
+  assert.equal(list.agents.some((a) => a.session === session), false);
+  assert.equal((await call(`/agents/${session}/dismiss`)).status, 404);
+});
+
 test('routines api: webhook needs a valid signature; history search finds events', async () => {
   const { createHmac } = await import('node:crypto');
   const wf = await (await call('/api/workflows', { name: 'W', nodes: [{ id: 's', type: 'start', x: 0, y: 0, data: { task: 't' } }, { id: 'a', type: 'agent', x: 0, y: 0, data: { name: 'HookGhost' } }], edges: [{ from: 's', to: 'a' }] }, tokens.command, 'PUT')).json();

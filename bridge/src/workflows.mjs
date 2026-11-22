@@ -165,7 +165,7 @@ export const TEMPLATES = [
   {
     // Phases 1-6 of blender_insta's minecraft-short skill. Stops at the vast.ai gate: the user rents
     // the box, then render, sound pass and delivery follow the skill's phases 7-9.
-    id: 'tpl-blender-insta', name: 'blender_insta: Minecraft short (idea → preview → render plan)',
+    id: 'tpl-blender-insta', name: 'Blender short: idea → preview → render plan',
     description: 'Run in the blender_insta folder. Idea and rounds, real assets, video.json, preview sheet, render package, vast.ai pick. Ends before anything is rented.',
     nodes: [
       box('start', 'start', 40, 220, { task: 'Video idea, e.g. "Tools vs Netherite Shield": pickaxe → shovel → hoe → final: mace smash' }),
@@ -180,6 +180,25 @@ export const TEMPLATES = [
     ],
     edges: [...chain('start', 'idea'), { from: 'idea', to: 'assets' }, { from: 'idea', to: 'voice' },
       ...chain('assets', 'config', 'preview', 'package', 'vast', 'end'), { from: 'voice', to: 'end' }],
+  },
+  {
+    // The pipeline the Block Lab shorts were really made with: image-model reference sheet -> Blender
+    // build -> 240p Colab preview -> the user's OK -> full Colab render -> delivery. A lead runs the loop
+    // (an arrow loop is not allowed), so bad previews go back to the Auditor or the Ref Artist.
+    id: 'tpl-video-gen', name: 'Blender video gen: ref sheet → 240p preview → full render',
+    description: 'Run in the blender_insta folder. A lead drives a ref-sheet artist, a Blender builder, a Colab 240p preview, your OK in game, then a full render with a watcher. A bad preview goes back for an audit or a new ref sheet.',
+    nodes: [
+      box('start', 'start', 40, 300, { task: 'Video idea, e.g. "Tools vs Netherite Shield". Vault notes (vault/Home.md) and the minecraft-short skill are the brain.' }),
+      box('lead', 'agent', 280, 300, { name: 'Director', job: 'Planner', model: '', agentId: '', lead: true, instructions: `${BI}You run the video from the Obsidian vault in this folder. First have Ref Artist read the vault and make the reference sheet. Then have Blender Builder build the scene from that sheet. Then have Colab Preview render a 240p preview on Google Colab. Then have Review Gate show the preview to the user and ask for the OK. The answer decides: "Render full" means assign Render Watcher; "Fix it" means assign Auditor to list what is wrong, then send those fixes to Blender Builder and run the preview again; "New reference sheet" means assign Ref Artist for a new sheet, then Blender Builder again. Never start the full render without the user's "Render full". At most 3 preview rounds, then stop and report what is blocking. Finish when Render Watcher reports the final MP4 downloaded and the Colab session stopped.` }),
+      agentBox('ref', 580, 20, 'Ref Artist', 'Researcher', `${BI}Read vault/Home.md, vault/User Rules & Tricks.md, vault/Mistakes Log.md and docs/TRACKER.md, then the vault note for the video idea. Make the reference sheet with the image model gpt-image-2.5-sunburst (quality high) through projects/course_vibecoders/01_free_hosting/tools/mf_image.py: one sheet with the hero, the props and the look, front and side, plus the background. Send a reference image of at most 768 px and under 1 MB (big uploads drop the connection). Save sheets to projects/NN_name/art/ref_v1.png, ref_v2.png and so on. Never use an old sheet again after the user asks for a new one. Report the paths and what the sheet shows. Costs about $0.065 per image: say how many you made.`),
+      agentBox('blender', 580, 140, 'Blender Builder', 'Coder', `${BI}Build the scene in Blender from the newest reference sheet in projects/NN_name/art/, using the Blender MCP. Use the real Minecraft assets from shared/ (models, particles, textures, sounds). Follow the minecraft-short skill for the config (video.json), run python3 shared/engine/setup_project.py projects/NN_name, and keep the project self-contained. Do a one-frame look test first and compare it to the sheet. Never render the video on this PC (MX450): only stills with --pct 30 --samples 16. Never kill the user's Blender. Report what you built and which frames differ from the sheet.`),
+      agentBox('colab', 580, 260, 'Colab Preview', 'Tester', `${BI}Make the 240p preview on Google Colab with the colab CLI (~/.local/bin/colab, --auth=oauth2), never on this PC. Zip the bundle (projects/NN_name plus shared/ pieces it needs, shared/sounds/minecraft too). Upload it, then run colab exec -s <session> --timeout 14400 -f driver.py: the driver installs Blender, unzips, renders at 240p (426x240 vertical-safe) and encodes an MP4 with a contact sheet of one frame per second. Time one light and one heavy frame first: 240p is not much cheaper than full when the scene sync is the cost. Keep the exec busy so the runtime is not idle-killed, set a timeout on every job, download the MP4 and sheet to projects/output/ as soon as they exist, and stop the session when you are done. Report the paths, the time and the compute units used.`),
+      agentBox('gate', 580, 380, 'Review Gate', 'Reviewer', `${BI}You are the user's gate. Give the user the preview paths (the 240p MP4 and the contact sheet in projects/output/), and say in two lines what you see. Then ask the user with ask_user: question "Preview OK?", options ["Render full", "Fix it", "New reference sheet"]. If they pick Fix it, ask what is wrong. Return their answer word for word. Do not decide for them.`),
+      agentBox('audit', 580, 500, 'Auditor', 'Reviewer', `${BI}Audit the preview against the reference sheet and vault/User Rules & Tricks.md and vault/Mistakes Log.md. Run the glitch pass: duplicates, jumps, pop-ins, camera speed, hero colour, titles in the Minecraft font, numbers on screen true, real assets only. Do not edit files. Return a numbered fix list for Blender Builder, each with the frame or second, or say it is good.`),
+      agentBox('watch', 580, 620, 'Render Watcher', 'Tester', `${BI}Only after the user's "Render full". Start the full render on Google Colab (G4 GPU, ~10 units/h) with the colab CLI, resumable (use_overwrite = False), OIDN denoise on the GPU, the number of slots you timed on a few frames. Then watch it: check progress every few minutes, and treat the session as gone only after several failed checks in a row. Download each finished piece as it finishes, then colab stop -s <session> (always). Back up the final MP4 off this PC the same day if the user gave a place. Update the project's row in docs/TRACKER.md and append today's vault/Log entry. Report the MP4 path, the time and the units used.`),
+      box('end', 'end', 880, 300),
+    ],
+    edges: [...chain('start', 'lead'), ...['ref', 'blender', 'colab', 'gate', 'audit', 'watch'].map((to) => ({ from: 'lead', to })), { from: 'lead', to: 'end' }],
   },
 ];
 

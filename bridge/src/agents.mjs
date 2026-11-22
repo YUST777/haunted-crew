@@ -42,6 +42,8 @@ export function agentEnv(env = process.env) {
   return out;
 }
 
+import { crewBriefing } from './briefing.mjs';
+
 export const DEFAULT_MODEL = 'claude-haiku-5.5';
 
 export class AgentError extends Error {
@@ -256,7 +258,14 @@ export function createAgentManager({
     a.said = []; // every reply bubble of this turn: a workflow step's output
     event(session, 'prompt', { text: clean(text, 300) });
     try {
-      const result = await a.worker.conn.request('session/prompt', { sessionId: session, prompt: [{ type: 'text', text }] });
+      // First turn only: tell the agent what it is and what the app can do (ACP has no system prompt).
+      let sent = text;
+      if (!a.briefed) {
+        a.briefed = true;
+        const crewTools = process.env.HAUNTED_CREW_MCP !== '0' && Boolean(mcpUrl?.());
+        sent = `${crewBriefing({ name: a.name, projectDir: a.cwd || cwd, worktree: Boolean(a.cwd), crewTools })}\n\n---\nUser request:\n${text}`;
+      }
+      const result = await a.worker.conn.request('session/prompt', { sessionId: session, prompt: [{ type: 'text', text: sent }] });
       clearTimeout(a.draftTimer);
       a.draftTimer = null;
       flushThought(session, a);
@@ -352,6 +361,21 @@ export function createAgentManager({
       a.paused = false;
       if (a.busy) a.worker.conn?.notify('session/cancel', { sessionId: session });
       return { cancelled: a.busy, dropped: dropped.length };
+    },
+
+    /** Dismiss a console ghost: stops its turn, denies its open permission, and removes it from the crew. */
+    dismiss(session) {
+      const a = agents.get(session);
+      if (!a) throw new AgentError(404, 'no such agent');
+      for (const q of a.queue.splice(0)) q.done?.reject(new AgentError(409, 'dismissed'));
+      if (a.permission && permissions.has(a.permission)) resolvePermission(a.permission, null, 'ghost dismissed');
+      if (a.busy) a.worker.conn?.notify('session/cancel', { sessionId: session });
+      clearTimeout(a.draftTimer);
+      event(session, 'session_end');
+      agents.delete(session);
+      a.worker.sessions = Math.max(0, a.worker.sessions - 1);
+      for (const [t, id] of tokens) if (id === session) tokens.delete(t);
+      return { dismissed: true };
     },
 
     /** Pause lets the running turn finish but starts nothing new; resume continues the queue. */

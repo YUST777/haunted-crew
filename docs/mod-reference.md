@@ -166,6 +166,7 @@ Registered in `HauntedCrew.registerCommands`. Root literal `crew`, `.requires(Co
 |---|---|---|
 | `/crew status` | Reports bridge state, URL and source, session count and loaded ghost count. | `Haunted Crew: bridge <state> at <url> (<source>), <N> session(s), <M> ghost(s) loaded` |
 | `/crew reload` | `stop()` then `start(server)`: re-reads config, rebuilds the office layout and manager, reconnects. | `Haunted Crew: config reloaded` (broadcast to ops) |
+| `/bigscreen <mode>` | Sets the big screen to `dashboard`, `code`, `website`, `search` or `activity` (same as the Screen Remote) and starts the page it needs. For the world owner or an operator, no cheats needed. Needs an office world; fails with the mode list otherwise. |
 | `/crew anchor` | Sets the config anchor to the command source's position, saves the config, and moves non-desk ghosts there. Fails if the mod is not running. | `Haunted Crew: ghosts now gather here` |
 | `/crew kit` | Gives the calling player the Agent Console and Screen Remote (same slots as the join kit). Requires a player. Works without an office. | `Haunted Crew: here are your tools (console, dashboard, activity log)` |
 | `/crew pair <code>` | Pairs with the bridge using a launcher code, default URL is the current config URL. | `Haunted Crew: <result message>` |
@@ -799,6 +800,7 @@ Command rights (`canCommand`) = command token configured AND the player is trust
 | `prompt` | `ConsoleScreen` (send, suggestion chips, Retry) | session = session id, text | `POST /agents/<id>/prompt` with `{"text": text}`; session required |
 | `model` | `ConsoleScreen` (model menu) | session, text = model id | `POST /agents/<id>/model` with `{"model": text}`; session and text required |
 | `interrupt` | `ConsoleScreen` (Stop button) | session | `POST /agents/<id>/interrupt` with `{}`; session required |
+| `dismiss` | `ConsoleScreen` (right-click a ghost > Dismiss ghost) | session | `POST /agents/<id>/dismiss` with `{}`; session required |
 | `permission` | `ConsoleScreen` (approval buttons) | session, requestId = permission id, optionId = option id (null for the Deny button) | `POST /agents/<id>/permission` with `{"requestId": ..., "optionId": ...}`; session and requestId required |
 | `screen_click` | `HauntedCrewClient.clickScreen` (wall click), `BrowserScreen` (page click) | text = `x,y` in 0..1 | `POST /browser/click` with `{"x": x, "y": y}` (page modes only) |
 | `screen_scroll` | `HauntedCrewClient` (sneak + left-click on wall, value `500`), `BrowserScreen` (wheel) | text = integer pixels | `POST /browser/scroll` with `{"dy": n}` (page modes only); non-integers ignored |
@@ -895,6 +897,7 @@ Retry backoff: starts at 1000 ms, doubles to a maximum of 30,000 ms, plus random
 | POST | `/agents/<id>/prompt` | command | prompt |
 | POST | `/agents/<id>/model` | command | model |
 | POST | `/agents/<id>/interrupt` | command | interrupt |
+| POST | `/agents/<id>/dismiss` | command | dismiss |
 | POST | `/agents/<id>/permission` | command | permission |
 | POST | `/browser/open`, `/browser/stop`, `/browser/click`, `/browser/scroll`, `/browser/type`, `/browser/key`, `/browser/back`, `/browser/forward`, `/browser/reload` | command | ScreenWall and screen actions |
 | GET, PUT, DELETE | `/api/workflows`, `/api/workflows/<id>`, `/api/workflows/<id>/run`, `/api/workflows/runs/<id>`, `/api/workflows/runs/<id>/stop` | as in 14.5 | workflow actions |

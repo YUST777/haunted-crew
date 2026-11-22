@@ -111,6 +111,7 @@ public final class HauntedCrew implements ModInitializer {
 				// First visit: start at the office's spawn marker (the gate), facing the house.
 				if (officeSpawn != null) server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(),
 					String.format(java.util.Locale.ROOT, "tp %s %.1f %d %.1f 180 0", p.getGameProfile().name(), officeSpawn[0] + 0.5, officeSpawn[1], officeSpawn[2] + 0.5));
+				Guide.lead(p);
 			}
 		}));
 	}
@@ -135,6 +136,7 @@ public final class HauntedCrew implements ModInitializer {
 		office.ifPresent(l -> manager.setDesks(l.deskSeats()));
 		officeSpawn = office.map(l -> l.spawn).orElse(null);
 		Guide.setHome(office.map(l -> l.guide).orElse(null));
+		Guide.setInside(office.map(Office.Layout::center).orElse(null));
 		office.filter(l -> l.screen != null).ifPresent(l -> screen = new ScreenWall(server, new BlockPos(l.screen[0], l.screen[1], l.screen[2])));
 		connect(server);
 	}
@@ -285,7 +287,11 @@ public final class HauntedCrew implements ModInitializer {
 			return;
 		}
 		ScreenWall.Mode[] all = ScreenWall.Mode.values();
-		ScreenWall.Mode next = all[(screen.mode().ordinal() + 1) % all.length];
+		setScreenMode(player, all[(screen.mode().ordinal() + 1) % all.length]);
+	}
+
+	/** Puts the big screen in `next` and starts the page it needs. */
+	static void setScreenMode(ServerPlayer player, ScreenWall.Mode next) {
 		screen.setMode(next);
 		String hint = next.web() ? "  ·  click it · sneak+use to type" : "";
 		player.sendOverlayMessage(Component.literal("Big screen: " + next.label + hint).withColor(0xFF9A3C));
@@ -324,6 +330,20 @@ public final class HauntedCrew implements ModInitializer {
 	}
 
 	private static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+		// /bigscreen <mode>: same as the Screen Remote, for the world owner or an operator (no cheats needed).
+		dispatcher.register(Commands.literal("bigscreen")
+			.requires(src -> src.getEntity() instanceof ServerPlayer p && console != null && console.isTrusted(p))
+			.then(Commands.argument("mode", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> {
+				String want = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "mode");
+				for (ScreenWall.Mode m : ScreenWall.Mode.values()) {
+					if (m.name().equalsIgnoreCase(want) && screen != null) {
+						setScreenMode(ctx.getSource().getPlayerOrException(), m);
+						return 1;
+					}
+				}
+				ctx.getSource().sendFailure(Component.literal("Modes: dashboard, code, website, search, activity (needs an office)"));
+				return 0;
+			})));
 		dispatcher.register(Commands.literal("crew")
 			.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 			.then(Commands.literal("status").executes(ctx -> {

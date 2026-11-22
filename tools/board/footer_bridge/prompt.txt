@@ -1,0 +1,19 @@
+Edit this image. Fill ONLY the black gap between the top band and the bottom scene.
+
+The top band is the bottom of a dark voxel Minecraft dungeon cellar floor (dark purple-grey stone tiles, moss, roots).
+The bottom scene is a neon voxel Minecraft library: teal-glowing stone floor, purple stone parapet, pillars, books, crystals, banner.
+
+Paint a continuous voxel Minecraft transition so it reads as ONE building going down a floor:
+the cellar stone floor continues down, breaks open into a stone staircase / broken floor edge with roots and moss,
+and drops into the darker chamber that becomes the library's back pillars and teal fog.
+Same lighting, same voxel style, same colours as both parts. Dark, moody, faint teal glow rising from below.
+
+Rules:
+- Do not change the top band or the bottom scene at all. Same scale, same position. Do not zoom out or re-frame.
+- No text, no UI, no characters, no ghosts, no blur band, no hard horizontal line.
+- Output exactly 2400x1440 (same as the input).
+
+HOW TO RUN: use the model's edit / inpaint / generative-fill mode.
+Image to edit = 1_input. Mask = 2_mask (transparent area = the gap to paint, rest locked).
+Do NOT give 1_input only as a reference: it gets redrawn and won't line up.
+Images 3 and 4 are style references only.

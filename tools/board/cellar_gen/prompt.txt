@@ -1,0 +1,13 @@
+Outpaint downward. The top band of this image is the bottom edge of a painted scene: the stone floor of a haunted Minecraft-style library with purple and cyan fog and a glowing green rune circle. KEEP that top band exactly as it is and continue the painting seamlessly below it, in the same glowing voxel art style, palette and lighting. No seam, no border, no fade to black at the join.
+
+Below the band, show a cutaway of the building going down: first the thick floor slab (stone blocks and dark wooden support beams, with thin cyan and purple light leaking down through cracks), then underneath it a large stone CELLAR room that fills the lower 75% of the image.
+
+Cellar composition:
+- Left 55%: a big Minecraft board mounted on the wall, seen perfectly straight-on. Thick oak log posts left and right, a mossy stone brick top with hanging vines, two glowing lanterns hanging at its top corners, glowstone blocks at its feet. Its interior is a perfectly flat, EMPTY, dark navy (#12101f) rectangle with sharp straight edges and nothing drawn inside it. Make the interior large: about 45% of the image width and 40% of the image height.
+- Right 45%: a darker, calm stone foundation wall with roots, cobwebs and a few low candles, plus a stone staircase leading up into the floor slab. Keep this area dark and uncluttered so white text can sit on it.
+- Floor: dark stone and dirt with roots, fading to near-black (#080c12) at the very bottom.
+
+No characters, no ghosts, no text, no letters, no UI.
+
+Settings: output 2400x1800 (or any 4:3 size), high quality, PNG.
+If the model has no outpaint/edit mode, use image 3 as the reference and add: "The top edge must continue the bottom edge of the reference image."

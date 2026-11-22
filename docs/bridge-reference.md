@@ -254,6 +254,7 @@ Requests with a path under `/agents` (first segment `agents`).
 | POST | `/agents/:session/prompt` | command | `{ "text": "..." }`, 1 to 4000 characters | `202 { "queued": n }` | `403`; `503`; `404` `not a console agent (hook-reported agents are watch-only)`; `400`; `429` `agent queue is full` (10 items) |
 | POST | `/agents/:session/model` | command | `{ "model": "..." }` | `200 { "model": "..." }` | `409` `wait until the ghost is idle`; `400`; `404`; `502` |
 | POST | `/agents/:session/interrupt` | command | | `200 { "cancelled": bool, "dropped": n }` | `404` |
+| POST | `/agents/:session/dismiss` | command | | `200 { "dismissed": true }`; stops the turn, denies an open permission, ends the session | `404` |
 | POST | `/agents/:session/pause` | command | | `200 { "paused": true, "queued": n }` | `404` |
 | POST | `/agents/:session/resume` | command | | `200 { "paused": false, "queued": n }` | `404` |
 | POST | `/agents/:session/permission` | command | `{ "requestId": "...", "optionId": "..." or null }` | `200 { "ok": true }` | `404` `no such permission request`; `400` `unknown option` |
@@ -611,7 +612,7 @@ Messages that expect a reply are not included. Because the reply from step 7 is 
 
 ### 12.3 Templates
 
-Listed in `GET /api/workflows` as `templates`. Running a template by its id (`POST /api/workflows/<id>/run`) works without saving it. Template ids: `tpl-feature`, `tpl-lead`, `tpl-bugfix`, `tpl-parallel`, `tpl-research`, `tpl-blender-insta`.
+Listed in `GET /api/workflows` as `templates`. Running a template by its id (`POST /api/workflows/<id>/run`) works without saving it. Template ids: `tpl-feature`, `tpl-lead`, `tpl-bugfix`, `tpl-parallel`, `tpl-research`, `tpl-blender-insta`, `tpl-video-gen`.
 
 | Template | Boxes (arrows) |
 |---|---|
@@ -620,7 +621,8 @@ Listed in `GET /api/workflows` as `templates`. Running a template by its id (`PO
 | `tpl-bugfix`: "Bug fix: investigate → fix → verify" | `start` → `find` (Investigator, Researcher) → `fix` (Fixer, Coder) → `verify` (Verifier, Tester) → `end` |
 | `tpl-parallel`: "Parallel: plan → code + docs → review" | `start` → `plan` (Planner) → `code` (Coder) and `docs` (Docs), in parallel → `review` (Reviewer) → `end` |
 | `tpl-research`: "Research: scout → write brief" | `start` → `scout` (Scout, Researcher) → `write` (Writer, Docs) → `end`. `write` is asked to save `docs/brief.md`. |
-| `tpl-blender-insta`: "blender_insta: Minecraft short (idea → preview → render plan)" | `start` → `idea` (Showrunner, Planner) → `assets` (Asset Hunter, Researcher) and `voice` (Voice Writer, Docs). Then `assets` → `config` (Engine Builder, Coder) → `preview` (Preview Checker, Tester) → `package` (Packager, Coder) → `vast` (Render Planner, Researcher) → `end`. `voice` → `end`. Its instructions are written for a separate `blender_insta` workspace (paths such as `projects/NN_name`, `shared/`, `vault/`) and end before any paid render is rented. |
+| `tpl-blender-insta`: "Blender short: idea → preview → render plan" | `start` → `idea` (Showrunner, Planner) → `assets` (Asset Hunter, Researcher) and `voice` (Voice Writer, Docs). Then `assets` → `config` (Engine Builder, Coder) → `preview` (Preview Checker, Tester) → `package` (Packager, Coder) → `vast` (Render Planner, Researcher) → `end`. `voice` → `end`. Its instructions are written for a separate `blender_insta` workspace (paths such as `projects/NN_name`, `shared/`, `vault/`) and end before any paid render is rented. |
+| `tpl-video-gen`: "Blender video gen: ref sheet → 240p preview → full render" | `start` → `lead` (Director, lead) → teammates `ref` (Ref Artist), `blender` (Blender Builder), `colab` (Colab Preview), `gate` (Review Gate), `audit` (Auditor), `watch` (Render Watcher); `lead` → `end`. The lead loops previews and never starts the full render without the user's "Render full" answer. |
 
 Template instructions are plain text in `src/workflows.mjs`. Every template passes `order()` (tests).
 
@@ -946,7 +948,7 @@ Each item was checked against the code. None is a guess.
 
 ## 19. Tests
 
-Run with `npm test` (`node --test test/*.test.mjs`). 22 test files, 159 test cases (counted from `^test(` lines). Coverage below is from test titles, with the descriptions checked against the file headers where needed.
+Run with `npm test` (`node --test test/*.test.mjs`). 23 test files, 162 test cases (counted from `^test(` lines). Coverage below is from test titles, with the descriptions checked against the file headers where needed.
 
 | File | Tests | Covers |
 |---|---|---|

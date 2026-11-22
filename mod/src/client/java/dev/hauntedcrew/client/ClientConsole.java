@@ -42,6 +42,8 @@ public final class ClientConsole {
 		}
 		if (v == null || v.type() == null) return;
 		switch (v.type()) {
+			case "tutorial" -> net.minecraft.client.Minecraft.getInstance().execute(
+				() -> net.minecraft.client.Minecraft.getInstance().gui.setScreen(new TutorialScreen()));
 			case "snapshot" -> {
 				sessions.clear();
 				if (v.sessions() != null) for (CrewProtocol.Session s : v.sessions()) sessions.put(s.id(), s);

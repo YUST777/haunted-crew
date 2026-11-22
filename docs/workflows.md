@@ -1,6 +1,6 @@
 # Workflows
 
-A workflow is a set of boxes and arrows. Each agent box becomes a Kiro ghost, the arrows set the order, and the results travel along the arrows. A lead box can also hand subtasks to teammates while it runs. This document covers the editor, the six built-in templates, the lead protocol, the run lifecycle and every feature that touches a run (approvals, routines, channels, steering and reviewed merges).
+A workflow is a set of boxes and arrows. Each agent box becomes a Kiro ghost, the arrows set the order, and the results travel along the arrows. A lead box can also hand subtasks to teammates while it runs. This document covers the editor, the seven built-in templates, the lead protocol, the run lifecycle and every feature that touches a run (approvals, routines, channels, steering and reviewed merges).
 
 Press **K → Workflows** in Minecraft, or open the `workflows` link the launcher prints (`http://127.0.0.1:8787/workflows#token=…`). The link can start ghosts: keep it private.
 
@@ -101,7 +101,7 @@ Pressing Run starts the run through `POST /api/workflows/<id>/run` with the Star
 
 ## Built-in templates
 
-Six templates ship with the bridge (`TEMPLATES` in `bridge/src/workflows.mjs`). They can be run directly by their ids (`tpl-feature`, `tpl-lead`, `tpl-bugfix`, `tpl-parallel`, `tpl-research`, `tpl-blender-insta`) or loaded into the editor from the TEMPLATES list.
+Seven templates ship with the bridge (`TEMPLATES` in `bridge/src/workflows.mjs`). They can be run directly by their ids (`tpl-feature`, `tpl-lead`, `tpl-bugfix`, `tpl-parallel`, `tpl-research`, `tpl-blender-insta`, `tpl-video-gen`) or loaded into the editor from the TEMPLATES list.
 
 Box ids are shown because the lead and the arrows refer to them. A "Lead" box is marked as such in the template; the other boxes are ordinary agent boxes unless a lead points at them.
 
@@ -177,7 +177,7 @@ Id `tpl-research`. Description: one ghost researches the question, another turns
 
 Edges: `start → scout → write → end`.
 
-### blender_insta: Minecraft short (idea → preview → render plan)
+### Blender short: idea → preview → render plan
 
 Id `tpl-blender-insta`. Description: run in the blender_insta folder. Idea and rounds, real assets, video.json, preview sheet, render package, vast.ai pick. Ends before anything is rented. Its start task example is `Video idea, e.g. "Tools vs Netherite Shield": pickaxe → shovel → hoe → final: mace smash`.
 
@@ -196,6 +196,24 @@ Every agent box in this template starts with the same house rules (summarised): 
 | `end` | end | | | Collects the results. |
 
 Edges: `start → idea`, `idea → assets`, `idea → voice`, `assets → config → preview → package → vast → end`, `voice → end`. `assets` and `voice` run at the same time after `idea`.
+
+### Blender video gen: ref sheet → 240p preview → full render
+
+Id `tpl-video-gen`. Description: run in the blender_insta folder. A lead drives a reference-sheet artist, a Blender builder, a Colab 240p preview, the user's OK in game, then a full render with a watcher. A bad preview goes back for an audit or a new reference sheet. Arrows cannot loop, so the loop is run by the lead (at most 3 preview rounds).
+
+| Box id | Type | Name | Job | Lead | Instructions (summary) |
+|---|---|---|---|---|---|
+| `start` | start | | | | Task: the video idea. |
+| `lead` | agent | Director | Planner | yes | Order: Ref Artist, Blender Builder, Colab Preview, Review Gate. The gate answer decides: "Render full" assigns Render Watcher; "Fix it" assigns Auditor, sends the fixes to Blender Builder and previews again; "New reference sheet" assigns Ref Artist again. Never starts the full render without "Render full". |
+| `ref` | agent | Ref Artist | Researcher | no | Reads the vault, makes the reference sheet with gpt-image-2.5-sunburst through `mf_image.py` (reference at most 768 px), saves `art/ref_vN.png`. |
+| `blender` | agent | Blender Builder | Coder | no | Builds the scene in Blender through the Blender MCP from the newest sheet, one-frame look test first, stills only on the local PC. |
+| `colab` | agent | Colab Preview | Tester | no | Zips the bundle, runs a 240p render on Google Colab with the colab CLI, keeps the exec busy, downloads the MP4 and a contact sheet, stops the session. |
+| `gate` | agent | Review Gate | Reviewer | no | Shows the preview to the user and asks "Preview OK?" with `ask_user` (Render full / Fix it / New reference sheet). |
+| `audit` | agent | Auditor | Reviewer | no | Glitch pass against the sheet, the vault rules and the mistakes log; returns a numbered fix list. |
+| `watch` | agent | Render Watcher | Tester | no | After "Render full" only: full Colab render, watches it, downloads pieces as they finish, stops the session, updates the tracker. |
+| `end` | end | | | | Collects the results. |
+
+Edges: `start → lead`, `lead →` each of the six teammates, `lead → end`.
 
 ## Lead delegation protocol
 

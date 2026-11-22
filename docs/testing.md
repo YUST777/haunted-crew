@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-cd bridge && npm test      # node:test, 159 tests
+cd bridge && npm test      # node:test, 162 tests
 ```
 
 | Area | Tests |

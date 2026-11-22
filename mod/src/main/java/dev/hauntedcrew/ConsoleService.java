@@ -180,6 +180,10 @@ public final class ConsoleService {
 			kiroStatus(player);
 			return;
 		}
+		if ("tour_done".equals(action.action())) {
+			Guide.sendInside(player);
+			return;
+		}
 		if ("kiro_status".equals(action.action())) {
 			kiroStatus(player);
 			return;
@@ -239,6 +243,10 @@ public final class ConsoleService {
 			case "interrupt" -> {
 				if (action.session() == null) return;
 				path = "/agents/" + URLEncoder.encode(action.session(), StandardCharsets.UTF_8) + "/interrupt";
+			}
+			case "dismiss" -> {
+				if (action.session() == null) return;
+				path = "/agents/" + URLEncoder.encode(action.session(), StandardCharsets.UTF_8) + "/dismiss";
 			}
 			case "permission" -> {
 				if (action.session() == null || action.requestId() == null) return;

@@ -6,7 +6,7 @@ Hold the **Screen Remote** and right-click a wall to cycle its mode.
 |---|---|
 | Dashboard | Crew cards, live activity, who needs you, spec tasks. |
 | Live code | Every edit as it happens, with a coloured diff. |
-| Website | Your project's dev server. |
+| Website | Your project's `/preview` pages. HTML pages reload themselves when the file changes, so you watch the crew build the page. |
 | Web search | A search page. |
 | Activity log | Recent events. |
 
