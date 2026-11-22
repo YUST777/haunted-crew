@@ -22,14 +22,17 @@ export function NavBar() {
 
   return (
     <header className="nav">
-      <Link to="/" className="brand" aria-label="Haunted Crew home">
-        <span className="brand-icon">
-          <GhostIcon />
-        </span>
-        <span className="brand-name">
-          Haunted <span className="accent">Crew</span>
-        </span>
-      </Link>
+      <div className="nav-left">
+        <Link to="/" className="brand" aria-label="Haunted Crew home">
+          <span className="brand-icon">
+            <GhostIcon />
+          </span>
+          <span className="brand-name">
+            Haunted <span className="accent">Crew</span>
+          </span>
+        </Link>
+        <a className="nav-badge" href="https://kiroween.devpost.com/" target="_blank" rel="noreferrer">Kiroween hackathon project <span aria-hidden="true">↗</span></a>
+      </div>
       <nav className={menuOpen ? 'nav-menu is-open' : 'nav-menu'} aria-label="Main">
         <button
           className="nav-toggle"
