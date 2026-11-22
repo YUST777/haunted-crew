@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 const LINKS = [
+  { label: 'Kiro', href: '/#kiro' },
   { label: 'The crew', href: '/#crew' },
   { label: 'Workflows', href: '/#features' },
   { label: 'About', href: '/#about' },
