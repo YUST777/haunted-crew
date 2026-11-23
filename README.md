@@ -53,7 +53,7 @@ Friends can join the server and watch your crew work.
 
 ## Try it fast (judges)
 
-- **Demo video:** https://youtu.be/P3XXjgptBRY
+- **Demo video:** https://youtu.be/azKBCWLgLLo
 - **No Minecraft?** Run `node bridge/bin/haunted-crew.mjs --demo` (after `cd bridge && npm install`) and open
   the read-only dashboard link it prints, or the workflow editor at `http://127.0.0.1:8787/workflows#token=…`.
   Demo mode needs no Kiro account and shows the crew cards, approvals and the live activity feed.
